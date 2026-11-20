@@ -1,0 +1,17 @@
+## Interface: 16001, 11509
+## Title: Dyre's Shields Up
+## Notes: A crescent that shows your remaining shield, for any class in WoW Forever
+## Author: Dyre
+## Version: 1.3.0
+## IconTexture: Interface\Icons\Spell_Holy_PowerWordShield
+## Category: Buffs & Debuffs
+## Dependencies: DyresToolkit
+## OptionalDeps: DyresSounds
+## Group: DyresToolkit
+## SavedVariablesPerCharacter: DyresShieldsUpDB
+
+Commands.lua
+Core.lua
+AuraEngine.lua
+Shield.lua
+Options.lua

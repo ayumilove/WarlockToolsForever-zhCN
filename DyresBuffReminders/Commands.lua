@@ -1,0 +1,43 @@
+local _, DBR = ...
+
+local USAGE = "Use /dbr (settings: Reminders, Consumables, Chimes, Proc Chimes, Cast Chimes, Combo Point Chimes), /dbr unlock, "
+    .. "/dbr lock, /dbr reset, /dbr debug, or /dbr probe on|off."
+local UNAVAILABLE = "Dyre's Buff Reminders is unavailable. Check the DBR login message."
+
+-- Each command is one word, or "probe on" and "probe off"; "" opens the settings. Handlers live in Core and
+-- Options. Diagnostics also run when DBR is unavailable, to help explain why.
+local COMMANDS = {
+    [""] = {handler = "OpenSettings"},
+    options = {handler = "OpenSettings"},
+    unlock = {handler = "Unlock"},
+    lock = {handler = "Lock"},
+    reset = {handler = "ResetPositions"},
+    debug = {handler = "ReportDebug", always = true},
+    ["probe on"] = {handler = "ProbeOn"},
+    ["probe off"] = {handler = "ProbeOff"},
+}
+
+function DBR.ParseCommand(message)
+    if type(message) ~= "string" then
+        return nil, USAGE
+    end
+    local command = message:match("^%s*(.-)%s*$"):lower():gsub("%s+", " ")
+    if not COMMANDS[command] then
+        return nil, USAGE
+    end
+    return command
+end
+
+function DBR.HandleCommand(message)
+    local command, usage = DBR.ParseCommand(message)
+    if not command then
+        DBR.Report(usage)
+        return
+    end
+    local entry = COMMANDS[command]
+    if not DBR.available and not entry.always then
+        DBR.Report(UNAVAILABLE)
+        return
+    end
+    DBR[entry.handler]()
+end

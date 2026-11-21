@@ -58,22 +58,23 @@ local enUS = {
     },
 }
 
--- Chinese: the English jokes kept, in Snow White's fairy-tale voice (apples,
--- the forest, dwarfs, the prince), and without the credit line: MIT asks for
--- no attribution in chat messages.
+-- Chinese: the player's own Snow White voice (the mirror, the poisoned apple,
+-- the witch), with emoji as asked, and without the credit line: MIT asks for
+-- no attribution in chat messages. If the client shows the emoji as boxes,
+-- remove only the leading symbol; the rest of each text stands alone.
 local zhCN = {
     announceDefaults = {
-        summonGroupText = "魔镜魔镜，把 >> %T << 带到我面前！点一下传送门，别让大家等成睡美人。",
-        soulstoneGroupText = ">> %T << 的一缕灵魂已封进苹果。死亡只是沉睡，别怕。",
-        summonWhisperText = "正在把你召唤到 %Z。别像小矮人那样慢吞吞地走山路，点传送门过来吧；弹出提示后请接受，没出现就告诉我。",
-        soulstoneWhisperText = "我把你的一缕灵魂封进了苹果。你倒下时会像白雪公主一样醒来——只不过这次叫醒你的不是王子，是灵魂石。",
-        healthstoneEmoteText = "捏碎一枚灵魂碎片，炼出一块治疗石——放心，不是毒苹果。",
-        soulstoneEmoteText = "把捕获的灵魂封进一颗苹果，某人的来世多了一条逃生通道。",
-        healthstoneWhisperText = "给你一块治疗石。放心，不是毒苹果——吃下去能多撑一会儿！",
-        fearGroupText = "正在恐惧 >> %T <<，让它跑，别追——追进森林，它会带着一群朋友回来。",
-        banishGroupText = "正在把 >> %T << %M 送去森林深处沉睡，在它醒来之前别去打扰。",
-        enslaveGroupText = "正在奴役 >> %T <<，它现在听我的了，像吃了毒苹果一样乖。别动我的新宠物。",
-        howlGroupText = "恐惧嚎叫！附近的家伙都要尖叫着逃进森林了。",
+        summonGroupText = "🪞魔镜魔镜，%T 在哪里？传送门已开，快来点门！",
+        soulstoneGroupText = "🍎%T 的灵魂已封入毒苹果，死亡不过是一场沉睡。",
+        summonWhisperText = "🏰小矮人别赶路啦！正在召唤你到 %Z，记得接受哦～",
+        soulstoneWhisperText = "🍎白雪公主，灵魂石已绑好。",
+        healthstoneEmoteText = "🍬魔女开炉做糖啦！放心，不是毒苹果……大概。",
+        soulstoneEmoteText = "🔮魔女将一缕灵魂封入宝石，留作死亡后的退路。",
+        healthstoneWhisperText = "🍬魔女的糖已送达！残血记得吃，毒不毒就看命啦～",
+        fearGroupText = "🌲%T 被吓进黑森林了！",
+        banishGroupText = "🌙%T 已陷入沉睡！",
+        enslaveGroupText = "🍎%T 已被魔女收服！",
+        howlGroupText = "🐺魔女尖叫啦！怪物四散奔逃，别追！",
     },
     announcePage = {
         title = "通报",
@@ -218,6 +219,14 @@ local zhText = {
     ["%s moved to %s in WTF 1.3.0. This opens its settings."] = "%s已在 WTF 1.3.0 移到 %s。点击打开它的设置。",
     ["%s (moved to %s)"] = "%s（已移到 %s）",
     ["%s moved to %s in WTF 1.3.0. %s"] = "%s已在 WTF 1.3.0 移到 %s。%s",
+    -- Options: Alerts page, the proc's owner (1.10.1)
+    ["%s arcs and sound"] = "%s弧线与音效",
+    ["Open settings"] = "打开设置",
+    ["No AddOn plays it with proc arcs now."] = "现在没有插件用触发弧线播放它。",
+    ["%s plays it with its proc arcs. This opens its settings."] =
+        "%s会用它自己的触发弧线播放。点击打开它的设置。",
+    ["No Dyre's AddOn plays it with proc arcs now."] = "现在没有 Dyre 插件用触发弧线播放它。",
+    ["The settings open out of combat."] = "设置需在战斗结束后打开。",
     -- Options: Control page
     ["Fear, Banish, and your focus"] = "恐惧、放逐与你的焦点",
     ["How Fear and your focus work"] = "恐惧与焦点如何运作",
@@ -327,6 +336,14 @@ local zhText = {
     ["Bars"] = "条形",
     ["Compact"] = "紧凑",
     ["Settings for the DoT tracker's %s only."] = "仅用于持续伤害追踪的%s。",
+    -- Options: Tracker page, the panel switches (1.10.1)
+    ["Show the %s"] = "显示%s",
+    ["Show the DoT tracker's %s. Untick it to hide the panel, for example when %s. The other panels stay. "
+        .. "A change in combat may wait until combat ends."] =
+        "显示持续伤害追踪的%s。取消勾选可隐藏此框体，例如当%s时。其他框体不受影响。"
+            .. "战斗中的修改会等到战斗结束后生效。",
+    ["your target frame already shows your DoTs"] = "你的目标框体已经显示你的持续伤害",
+    ["you do not use it"] = "你不需要用它",
     ["The row border and health fill of the other mobs' rows. It changes at once, also in combat."] =
         "其他怪物行的边框和生命值填充。立即生效，战斗中也会改变。",
     ["The outline and health fill of the %s. It changes at once, also in combat."] =
@@ -349,6 +366,23 @@ local zhText = {
             .. "开启后，点击目标或焦点行不会补放持续伤害，也不显示智能诅咒字母。",
     [" With Curse slot click set to Smart curse, the smart curse still works from its key binding and the \"! Curse\" macro."] =
         " 当诅咒栏位点击设为“智能诅咒”时，智能诅咒仍可通过其按键绑定和“! Curse”宏使用。",
+    -- Options: warnings (Warnings.lua)
+    ["Warn before a DoT runs out"] = "DoT 快没时提醒",
+    ["Flash the target or focus row 3 seconds before a DoT you cast runs out. It counts from your cast, "
+        .. "so a dispel or an early break can make it wrong."] =
+        "你上的 DoT 还剩 3 秒时，目标或焦点行闪一下。按你自己的施法时间计算，"
+            .. "被驱散或提前消失时可能会误报。",
+    ["Chime with warnings"] = "提醒时响一声",
+    ["Play a chime with the DoT and Banish warnings."] = "DoT 和放逐的提醒都会响一声。",
+    -- Tracker rows: the pinned tags and the name click
+    ["Click to select this mob."] = "左键点击：选中这只怪",
+    ["In combat the game does not let an AddOn change your target; click the mob's nameplate."] =
+        "战斗中游戏不允许插件替你切换目标，请点它的姓名板。",
+    ["Warn before Banish ends"] = "放逐快结束时提醒",
+    ["Flash the Control bar 3 seconds before your Banish runs out. It counts from your cast, so an early "
+        .. "break can make it wrong."] =
+        "你的放逐还剩 3 秒时，控制条闪一下。按你自己的施法时间计算，"
+            .. "怪物提前挣脱时可能会误报。",
     ["In combat, a bubble above each hostile nameplate with a dot per DoT you know: colored while it is up, "
         .. "grey while it is missing. Needs at least one DoT you know. The DoTs page chooses the dots."] =
         "战斗中，在每个敌对姓名板上方显示一个气泡，你掌握的每个持续伤害对应一个圆点：存在时显示颜色，"

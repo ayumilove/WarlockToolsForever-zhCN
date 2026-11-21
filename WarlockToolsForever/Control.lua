@@ -79,7 +79,8 @@ function WTF.SanitizeControl(saved, sanitizePosition)
     local markers = type(saved.markers) == "table" and saved.markers or {}
     local clean = {enabled = saved.enabled ~= false, position = sanitizePosition(saved.position),
         scale = WTF.SanitizeControlScale(saved.scale), markers = {}, markersVersion = MARKERS_VERSION,
-        plateTimers = saved.plateTimers ~= false, macros = saved.macros ~= false}
+        plateTimers = saved.plateTimers ~= false, macros = saved.macros ~= false,
+        banishWarn = saved.banishWarn ~= false}
     for key, marker in pairs(markers) do
         if type(key) == "string" and ValidMarker(marker) then
             clean.markers[key] = marker

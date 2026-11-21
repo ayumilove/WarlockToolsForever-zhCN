@@ -199,8 +199,50 @@ local function AddProc(proc, library, procsSwitch)
     Nest(dropdown, switch, function() return DBR.db.procs.enabled and DBR.db.procs.spells[proc.key] end)
 end
 
+-- The proc cues (1.13.0, Dyre's Toolkit's proc engine 2): the engine's rows,
+-- a "Procs" header and per proc its arc and sound switches and its sound,
+-- then the arcs' size; then, with SpellActivationOverlay loaded, the switch
+-- to show the arcs beside it (from DSU 1.4; applies after a /reload). While
+-- the arcs step aside for it, each arc switch is greyed.
+local SAO_ROW = "Show proc arcs with SpellActivationOverlay"
+local SAO_TOOLTIP = "SpellActivationOverlay is loaded, so Dyre's proc arcs stay off by default; their sounds "
+    .. "still play. Tick this to show both. It applies after a /reload."
+
+local function AddProcCuesSection()
+    local handle = DBR.ProcCuesHandle()
+    if not handle or type(DBR.toolkit.AddProcSettings) ~= "function" then
+        return
+    end
+    local rows = DBR.toolkit.AddProcSettings(category, layout, handle, {header = "Procs"})
+    if type(rows) == "table" and DBR.ProcArcsSteppedAside() then
+        for _, row in pairs(rows) do
+            if type(row) == "table" and type(row.arc) == "table" and type(row.arc.AddModifyPredicate) == "function" then
+                row.arc:AddModifyPredicate(function() return false end)
+            end
+        end
+    end
+    if not DBR.SpellActivationOverlayLoaded() then
+        return
+    end
+    local setting = Settings.RegisterProxySetting(category, "DBR_PROCS_WITH_SAO", Settings.VarType.Boolean,
+        SAO_ROW, false,
+        function() return DBR.db.procsWithSAO end,
+        function(value)
+            local wanted = value == true
+            if wanted ~= DBR.db.procsWithSAO then
+                DBR.db.procsWithSAO = wanted
+                DBR.Report("Your proc arc choice applies after a /reload.")
+            end
+        end)
+    Settings.CreateCheckbox(category, setting, SAO_TOOLTIP)
+end
+
 -- The proc sounds section, for a class with procs on a client that can play them.
 local function AddProcsSection()
+    if DBR.procEngine then
+        AddProcCuesSection()
+        return
+    end
     local spells = DBR.ClassProcs(DBR.classFile)
     if #spells == 0 or not DBR.HasProcSounds() then
         return
@@ -725,7 +767,7 @@ local function AddSharedLead(master, Enabled)
     local leadSlider = Settings.CreateSlider(category, lead, SliderOptions(DBR.LEAD_MIN, DBR.LEAD_MAX, 1, true),
         "Warn this share of a buff's own length before it runs out: its border turns yellow and flashes, so you "
             .. "can recast it in time. 10% of a 30-minute buff is 3 minutes. 0 warns only once it is gone, with "
-            .. "a red border, also in combat.")
+            .. "a glow or red border (Missing buff), also in combat.")
     if type(DBR.toolkit.AddDefaultTick) == "function" then
         DBR.toolkit.AddDefaultTick(leadSlider, {min = DBR.LEAD_MIN, max = DBR.LEAD_MAX, default = DBR.DEFAULT_LEAD})
     end
@@ -752,14 +794,40 @@ local function AddNotNeededAlpha(master, Enabled)
     Nest(slider, master, Enabled)
 end
 
+-- "Missing buff" (John, 2026-11-20): the glow or the red border while a buff
+-- is gone; running out stays yellow.
+local function AddMissingStyle(master, Enabled)
+    local setting = Settings.RegisterProxySetting(category, "DBR_MISSING_STYLE", Settings.VarType.String,
+        "Missing buff", DBR.DEFAULT_MISSING_STYLE, function() return DBR.db.missingStyle end,
+        function(value)
+            if not DBR.MISSING_STYLE_LABELS[value] then
+                return
+            end
+            DBR.db.missingStyle = value
+            DBR.RefreshReminders()
+        end)
+    local function Choices()
+        local container = Settings.CreateControlTextContainer()
+        for _, style in ipairs(DBR.MISSING_STYLE_ORDER) do
+            container:Add(style, DBR.MISSING_STYLE_LABELS[style])
+        end
+        return container:GetData()
+    end
+    local dropdown = Settings.CreateDropdown(category, setting, Choices,
+        "How a reminder shows that its buff is gone: Glow, the action bars' proc glow, or Red border. A buff "
+            .. "about to run out still has a yellow, flashing border and its time left. In combat, while the "
+            .. "buff is up, the glow waits inside the icon under the game's buff icon, so it is smaller there.")
+    Nest(dropdown, master, Enabled)
+end
+
 -- A buff switch's tooltip: what it shows, and for a tank buff whom it watches.
 local function BuffTooltip(reminder)
-    local text = "Show " .. reminder.label .. ": red border while it is missing, yellow and flashing before it "
-        .. "runs out, also in combat. Click it to cast it."
+    local text = "Show " .. reminder.label .. ": a glow or red border (Missing buff) while it is missing, "
+        .. "yellow and flashing before it runs out, also in combat. Click it to cast it."
     -- A tank buff: the key points only (author); README has the rest.
     if reminder.tank then
-        return "Maintains " .. reminder.label .. " on you, or on the group's Tank if there is one. Red when "
-            .. "it's missing, yellow before it runs out."
+        return "Maintains " .. reminder.label .. " on you, or on the group's Tank if there is one. A glow or "
+            .. "red border when it's missing, yellow before it runs out."
     end
     return text
 end
@@ -876,6 +944,7 @@ function DBR.InitializeOptions()
         AddSharedLead(master, Enabled)
     end
     AddNotNeededAlpha(master, Enabled)
+    AddMissingStyle(master, Enabled)
     AddReminderSizes()
     AddAspectBarSection()
     AddConsumablesSection()

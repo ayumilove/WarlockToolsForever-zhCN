@@ -133,6 +133,8 @@ function DSU.InitializeOptions()
             SliderOptions(display.SCALE_MIN, display.SCALE_MAX, display.SCALE_STEP),
             "How big the shield display is, in percent." .. note), display)
     end
+    -- Proc cues moved to Dyre's Buff Reminders (1.5.0): a link to its page.
+    DSU.AddProcsMovedRow(category, layout)
     -- A page under the toolkit's home is registered with it, and the toolkit's
     -- "Unlock frames" switch there unlocks every Dyre's AddOn (author-approved:
     -- no unlock switch of DSU's own then).

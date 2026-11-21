@@ -240,8 +240,8 @@ local REQUIRED_NAMESPACE = {
     "InitializePredict", "RefreshPredict", "PredictAvailable", "ReportPredictDebug", "DotTracker",
     "SmartCurseAvailable", "ApplyCurseMacro", "SetCurseMode", "SetCurseMarker",
     "SetStonesScale", "SetShardCounterScale",
-    "TrackerOutlineAvailable", "SetTrackerOutlineWidth",
-    "RefreshTrackerPrediction",
+    "TrackerOutlineAvailable", "SetTrackerOutlineWidth", "TrackerPanelsAvailable", "SetTrackerPanelShown",
+    "RefreshTrackerPrediction", "InitializeWarnings",
     "ReportRestrictions", "ResetFocusWorks", "InitializeProbe", "InitializeOptions", "OpenSettings",
 }
 
@@ -349,12 +349,26 @@ local OLD_ZHCN_DEFAULTS = {
     enslaveGroupText = {"正在奴役 >> %T <<，它现在听我的，别动我的新宠物 —— 来自 Warlock Tools Forever (WTF)"},
     howlGroupText = {"恐惧嚎叫！附近所有东西马上要尖叫着四散奔逃 —— 来自 Warlock Tools Forever (WTF)"},
 }
+-- The Snow White set after that, before the witch-and-emoji rewrite.
+local OLD_ZHCN_DEFAULTS_2 = {
+    summonGroupText = {"魔镜魔镜，把 >> %T << 带到我面前！点一下传送门，别让大家等成睡美人。"},
+    soulstoneGroupText = {">> %T << 的一缕灵魂已封进苹果。死亡只是沉睡，别怕。"},
+    summonWhisperText = {"正在把你召唤到 %Z。别像小矮人那样慢吞吞地走山路，点传送门过来吧；弹出提示后请接受，没出现就告诉我。"},
+    soulstoneWhisperText = {"我把你的一缕灵魂封进了苹果。你倒下时会像白雪公主一样醒来——只不过这次叫醒你的不是王子，是灵魂石。"},
+    healthstoneEmoteText = {"捏碎一枚灵魂碎片，炼出一块治疗石——放心，不是毒苹果。"},
+    soulstoneEmoteText = {"把捕获的灵魂封进一颗苹果，某人的来世多了一条逃生通道。"},
+    healthstoneWhisperText = {"给你一块治疗石。放心，不是毒苹果——吃下去能多撑一会儿！"},
+    fearGroupText = {"正在恐惧 >> %T <<，让它跑，别追——追进森林，它会带着一群朋友回来。"},
+    banishGroupText = {"正在把 >> %T << %M 送去森林深处沉睡，在它醒来之前别去打扰。"},
+    enslaveGroupText = {"正在奴役 >> %T <<，它现在听我的了，像吃了毒苹果一样乖。别动我的新宠物。"},
+    howlGroupText = {"恐惧嚎叫！附近的家伙都要尖叫着逃进森林了。"},
+}
 
 -- A saved text is unedited when it equals an earlier default or any locale's
 -- current default, so a character saved in one language follows the client's
 -- language once that changes.
 local function IsOldDefault(key, text)
-    for _, set in ipairs({OLD_ANNOUNCE_DEFAULTS, OLD_ZHCN_DEFAULTS}) do
+    for _, set in ipairs({OLD_ANNOUNCE_DEFAULTS, OLD_ZHCN_DEFAULTS, OLD_ZHCN_DEFAULTS_2}) do
         for _, old in ipairs(set[key] or {}) do
             if text == old then
                 return true
@@ -679,6 +693,13 @@ function WTF.SanitizeDB(db)
         -- Hide empty DoT slots (John, 2026-11-17, a player's request; Toolkit
         -- TRACKER_HIDE_EMPTY): off by default.
         hideEmpty = tracker.hideEmpty == true,
+        -- Panel switches (John, 2026-11-19, a player's request; Toolkit
+        -- TRACKER_PANELS): each panel shows unless false.
+        show = {},
+        -- Warnings (Warnings.lua): the pinned row flashes 3 s before a DoT of
+        -- yours runs out; the chime stays off.
+        dotWarn = tracker.dotWarn ~= false,
+        warnSound = tracker.warnSound == true,
     }
     for _, key in ipairs({"lastBane", "lastCurse", "lastControl"}) do
         db.tracker[key] = type(tracker[key]) == "string" and tracker[key] or nil
@@ -686,6 +707,10 @@ function WTF.SanitizeDB(db)
     local sizes = type(tracker.sizes) == "table" and tracker.sizes or {}
     for theme in pairs(WTF.TRACKER_SIZE_SPECS) do
         db.tracker.sizes[theme] = WTF.SanitizeTrackerSizes(theme, sizes[theme])
+    end
+    local show = type(tracker.show) == "table" and tracker.show or {}
+    for _, panel in ipairs(WTF.TRACKER_PANELS) do
+        db.tracker.show[panel.key] = show[panel.key] ~= false
     end
     local panelOpacity = type(tracker.panelOpacity) == "table" and tracker.panelOpacity or {}
     for _, panel in ipairs(WTF.TRACKER_PANELS) do
@@ -1226,6 +1251,8 @@ events:SetScript("OnEvent", function(self, event, loadedName)
         WTF.InitializeTracker()
         WTF.InitializeControl()
         WTF.InitializePlateDots()
+        -- After the tracker and the Control bar: it overlays their frames.
+        WTF.InitializeWarnings()
     end
     WTF.InitializeProbe()
     WTF.InitializeOptions()

@@ -68,7 +68,7 @@ end
 -- Functions other runtime files must define. A mixed install of old and new
 -- files otherwise fails silently, because the client hides Lua errors by default.
 local REQUIRED_NAMESPACE = {"ParseCommand", "HandleCommand", "InitializeOptions", "OpenSettings",
-    "CreateAuraContainer", "AuraEngineKind"}
+    "CreateAuraContainer", "AuraEngineKind", "NoteProcsMoved", "AddProcsMovedRow"}
 local REQUIRED_SHIELD = {"Initialize", "Sanitize", "Refresh", "ApplyBreakSound", "PreviewBreakSound",
     "SanitizeBreakSound", "SoundChoices", "SetupSoundMenu", "ResetPosition", "ReportDebug", "IsOwner",
     "OwnerAddOn"}
@@ -101,6 +101,9 @@ function DSU.SanitizeDB(db)
     if type(db.migratedFrom) ~= "string" then
         db.migratedFrom = nil
     end
+    -- DSU 1.4.x's proc data (Procs.lua, DSU.LEGACY_PROC_KEYS) is left as it
+    -- is: Dyre's Buff Reminders 1.13.0 reads it once to import it.
+    db.procsMovedNoted = db.procsMovedNoted == true or nil
     return db
 end
 
@@ -226,15 +229,19 @@ end
 -- that holds "every setting for every Dyre addon"): DSU's part is
 -- DyresShieldsUpDB, whose shield table holds every setting, the ring's place,
 -- and its sizes. migratedFrom stays per character: it records this
--- character's one-time copy from MTF or WTF, not a setting.
-local PROFILE_CHARACTER_KEYS = {"migratedFrom"}
+-- character's one-time copy from MTF or WTF, not a setting. DSU 1.4.x's proc
+-- data (procs, procIDs, procsWithSAO) stays per character too, since 1.5.0:
+-- it is no longer a setting here, only what Dyre's Buff Reminders imports
+-- from this character, so a profile copy never overwrites it. So is
+-- procsMovedNoted, the one-time "moved" line.
+local PROFILE_CHARACTER_KEYS = {"migratedFrom", "procIDs", "procs", "procsWithSAO", "procsMovedNoted"}
 
 -- A copy or import was written into DyresShieldsUpDB in place: the lock is
 -- the toolkit's, the ring's place and sizes come back through the toolkit,
 -- and the display and its sound read the settings again.
 function DSU.ApplyProfile()
     DSU.db.shield.locked = DSU.toolkit.IsLocked()
-    if DSU.shieldWidget and type(DSU.toolkit.ReapplyWidgets) == "function" then
+    if type(DSU.toolkit.ReapplyWidgets) == "function" then
         DSU.toolkit.ReapplyWidgets(addonName)
     end
     DSU.RefreshShield()
@@ -320,6 +327,8 @@ events:SetScript("OnEvent", function(self, event, loadedName)
     -- Before the display reads its settings; also when DSU then stays off, so
     -- the copy is there once the toolkit is.
     DSU.CopyShieldSettings()
+    -- Where the proc cues went (1.5.0), also when DSU then stays off.
+    DSU.NoteProcsMoved()
     local toolkit = DSU.Toolkit()
     if not toolkit then
         DSU.available = false

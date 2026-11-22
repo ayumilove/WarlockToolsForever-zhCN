@@ -19,6 +19,15 @@ local addonName, WTF = ...
 -- each drop inside. As you leave, the keep count goes down to it, so shards
 -- gained inside and kept for any reason go on the next key presses, down to
 -- the limit; shards you brought in (from the bank, for a raid) stay.
+--
+-- Trim on request (1.12.0; John, 2026-11-21: "Yes, build it", from a player
+-- asking to free bag space in dungeons): a right-click on the shard counter
+-- lowers the keep count to the limit (and a saved instance keep too), so
+-- every shard above the limit goes, also ones you brought in, in or out of an
+-- instance, and also with automatic deletion off (state.trimming). The first
+-- goes in the click itself (a hardware event), the rest on the next inputs, as
+-- always. While the trim runs, a new shard raises the keep count by its own
+-- amount, so the trim still ends at the limit and new shards stay.
 local SOUL_SHARD_ITEM_ID = 6265
 -- Bit in GetContainerNumFreeSlots' bagFamily that marks a soul bag.
 local SOUL_BAG_FAMILY = 4
@@ -82,6 +91,10 @@ local state = {
     heldAt = nil,
     deleting = false,
     refused = false,
+    trimming = false,
+    -- Under the Map restriction alone (1.12.2): nil (not tried this visit),
+    -- "allowed", or "refused". Cleared on PLAYER_ENTERING_WORLD.
+    mapResult = nil,
     processing = false,
     secretCasts = false,
     gains = {},
@@ -201,9 +214,24 @@ end
 -- (WTF.MoveRestricted in Core; found in client: DeleteCursorItem raised
 -- ADDON_ACTION_BLOCKED in a dungeon, BugGrabber 6x): WTF neither picks up nor
 -- deletes a shard then; the keep count leaves it for the first input after.
+-- 1.12.2: under the Map restriction alone, a right-click trim tries (until
+-- refused in this instance visit); automatic deletion still waits.
 local function DeletionRestricted()
-    return WTF.MoveRestricted()
+    if WTF.HardRestricted() then
+        return true
+    end
+    if not WTF.MapRestricted() then
+        return false
+    end
+    return not (state.trimming and state.mapResult ~= "refused")
 end
+
+local function MapOnly()
+    return WTF.MapRestricted() and not WTF.HardRestricted()
+end
+
+local MAP_REFUSED_LINE = WTF.T("The game does not let AddOns delete items in this dungeon. "
+    .. "Shards above your limit go when you leave it.")
 
 local function InCreationWindow()
     return state.channeling or GetTime() <= state.windowEnd
@@ -250,13 +278,20 @@ local function DeleteOne(bag, slot, count)
         return "held"
     end
     local info = ShardStack(bag, slot)
+    -- Under Map alone (1.12.2) the client may refuse the pickup itself; that
+    -- counts as a refusal there, not as a pickup that took nothing.
+    state.deleting, state.refused = true, false
     if info.stackCount > 1 then
         C_Container.SplitContainerItem(bag, slot, 1)
     else
         C_Container.PickupContainerItem(bag, slot)
     end
+    state.deleting = false
     local kind, itemID = GetCursorInfo()
     if kind == nil then
+        if state.refused and MapOnly() then
+            return "blocked"
+        end
         return "missed"
     end
     if kind ~= "item" or itemID ~= SOUL_SHARD_ITEM_ID then
@@ -318,8 +353,11 @@ end
 -- when a restriction began meanwhile; otherwise it stops deletion. A pickup that
 -- takes nothing waits for the next input. Cursor events fire while a deletion
 -- is under way, so calls never nest.
-local function ProcessDeletions()
-    if state.processing or state.blocked or not WTF.db.shards.enabled or Settling() then
+-- beforeReport (the right-click's own line) runs after the attempt, before
+-- any other line, unless the Map restriction refused it. Returns the result,
+-- or nil when nothing was tried.
+local function ProcessDeletions(beforeReport)
+    if state.processing or state.blocked or not (WTF.db.shards.enabled or state.trimming) or Settling() then
         return
     end
     if DeletionRestricted() then
@@ -327,7 +365,11 @@ local function ProcessDeletions()
         return
     end
     local count, keep = WTF.CountShards(), KeepNow()
-    if count <= keep or not CursorEmpty() then
+    if count <= keep then
+        state.trimming = false
+        return
+    end
+    if not CursorEmpty() then
         return
     end
     local target = DeletionSlot()
@@ -339,6 +381,21 @@ local function ProcessDeletions()
     state.processing = false
     state.lastAttempt = {time = GetTime(), result = result, combat = InCombatLockdown(),
         restricted = DeletionRestricted(), count = count, keep = keep}
+    if MapOnly() then
+        if result == "deleted" then
+            state.mapResult = "allowed"
+        elseif result == "blocked" then
+            -- The shard is back (DeleteOne). Not the permanent stop: it goes
+            -- when you leave (the trim lowered the keep count and instanceKeep).
+            state.mapResult = "refused"
+            state.heldAt = GetTime()
+            WTF.Report(MAP_REFUSED_LINE)
+            return result
+        end
+    end
+    if beforeReport then
+        beforeReport()
+    end
     if result == "deleted" then
         LogDeletion(target.bag, target.slot, count, keep)
         if WTF.db.shards.report then
@@ -354,6 +411,7 @@ local function ProcessDeletions()
         StopDeleting(result == "blocked" and "the client blocked it"
             or "the cursor did not hold one Soul Shard, so nothing was deleted")
     end
+    return result
 end
 
 local function OnInput()
@@ -412,10 +470,62 @@ local function ShowCounterTooltip(frame)
     GameTooltip:SetText(WTF.T("Soul Shards"))
     GameTooltip:AddLine(string.format(WTF.T("%d of %d (%s limit)"), WTF.CountShards(), limit,
         LIMIT_SOURCES[source]), 1, 1, 1)
+    local above = math.max(0, WTF.CountShards() - limit)
+    local trimLine
+    if above == 0 then
+        trimLine = WTF.T("Right-click: delete shards above your limit (none now)")
+    elseif above == 1 then
+        trimLine = WTF.T("Right-click: delete 1 shard above your limit")
+    else
+        trimLine = string.format(WTF.T("Right-click: delete %d shards above your limit"), above)
+    end
+    GameTooltip:AddLine(trimLine, 0.7, 0.7, 0.7, true)
     if not WTF.db.shards.counterLocked then
         GameTooltip:AddLine(WTF.T("Drag to move. /wtf reset moves it back."), 0.7, 0.7, 0.7, true)
     end
     GameTooltip:Show()
+end
+
+-- The right-click (1.12.0): every shard above the limit goes, the first now.
+-- No popup and no question: the click is the request.
+function WTF.TrimShards()
+    if state.blocked then
+        WTF.Report(string.format(WTF.T("Soul Shard deletion stopped: %s. It stays off until you /reload."),
+            WTF.T(tostring(state.stopReason))))
+        return
+    end
+    local limit = WTF.GetShardLimit()
+    local above = WTF.CountShards() - limit
+    if above <= 0 then
+        WTF.Report(string.format(WTF.T("No Soul Shards above your limit of %d."), limit))
+        return
+    end
+    state.keep = limit
+    state.trimming = true
+    local instanceKeep = WTF.db.shards.instanceKeep
+    if instanceKeep ~= nil then
+        WTF.db.shards.instanceKeep = math.min(instanceKeep, limit)
+    end
+    if WTF.HardRestricted() then
+        state.heldAt = GetTime()
+        WTF.Report(WTF.T("Soul Shards above your limit go after combat."))
+        return
+    end
+    if WTF.MapRestricted() and state.mapResult == "refused" then
+        state.heldAt = GetTime()
+        WTF.Report(MAP_REFUSED_LINE)
+        return
+    end
+    local said = false
+    local function Say()
+        said = true
+        WTF.Report(string.format(WTF.T("Deleting %d Soul Shards above your limit of %d, one per key press or click."),
+            above, limit))
+    end
+    ProcessDeletions(Say)
+    if not said and state.mapResult ~= "refused" then
+        Say()
+    end
 end
 
 -- A plain frame, not a secure one, so it moves and updates in combat too.
@@ -451,6 +561,13 @@ local function CreateCounter()
     counter:SetScript("OnDragStart", WTF.BeginDrag)
     counter:SetScript("OnDragStop", WTF.EndDrag)
     WTF.RegisterMovable(counter, function(position) WTF.db.shards.counterPosition = position end)
+    -- The left button drags; a right-click trims (a hardware event, so the
+    -- first deletion may happen in it).
+    counter:SetScript("OnMouseUp", function(_, button)
+        if button == "RightButton" then
+            WTF.TrimShards()
+        end
+    end)
     counter:SetScript("OnEnter", ShowCounterTooltip)
     counter:SetScript("OnLeave", function() GameTooltip:Hide() end)
     counter.mover = WTF.CreateMover(counter)
@@ -499,11 +616,18 @@ local function OnBagsChanged()
         local created = InCreationWindow()
         if created and WTF.db.shards.enabled and not state.blocked then
             state.keep = math.max(state.keep, math.min(count, (WTF.GetShardLimit())))
+        elseif state.trimming then
+            -- A new shard while a trim runs stays: the trim still ends at the limit.
+            state.keep = state.keep + change
         else
             state.keep = math.max(state.keep, count)
         end
         LogGain(change, count, created)
-    elseif change < 0 then
+    end
+    if state.trimming and count <= KeepNow() then
+        state.trimming = false
+    end
+    if change < 0 then
         state.keep = math.min(state.keep, count)
         local instanceKeep = WTF.db.shards.instanceKeep
         if instanceKeep ~= nil then
@@ -557,6 +681,7 @@ events:SetScript("OnEvent", function(_, event, ...)
     if event == "BAG_UPDATE_DELAYED" then
         OnBagsChanged()
     elseif event == "PLAYER_ENTERING_WORLD" then
+        state.mapResult = nil
         OnBagsChanged()
         OnZoneChanged()
     elseif event == "ADDON_ACTION_BLOCKED" or event == "ADDON_ACTION_FORBIDDEN" then
@@ -692,9 +817,11 @@ function WTF.ReportShardDebug()
     end
     local limit, source = WTF.GetShardLimit()
     WTF.Report(string.format(
-        "debug_shards count=%d limit=%d keep=%d source=%s enabled=%s blocked=%s restricted=%s held=%s channeling=%s secretCasts=%s settling=%s inInstance=%s instanceKeep=%s",
+        "debug_shards count=%d limit=%d keep=%d source=%s enabled=%s trimming=%s blocked=%s restricted=%s hard=%s map=%s mapResult=%s held=%s channeling=%s secretCasts=%s settling=%s inInstance=%s instanceKeep=%s",
         WTF.CountShards(), limit, state.keep, source, tostring(WTF.db and WTF.db.shards.enabled),
-        tostring(state.blocked), tostring(DeletionRestricted()),
+        tostring(state.trimming),
+        tostring(state.blocked), tostring(DeletionRestricted()), tostring(WTF.HardRestricted()),
+        tostring(WTF.MapRestricted()), tostring(state.mapResult),
         state.heldAt and string.format("%.1fs ago", GetTime() - state.heldAt) or "never", tostring(state.channeling),
         tostring(state.secretCasts), tostring(Settling()), tostring(InInstance()),
         tostring(WTF.db and WTF.db.shards.instanceKeep)))

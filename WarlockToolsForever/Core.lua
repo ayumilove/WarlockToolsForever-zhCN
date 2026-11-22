@@ -98,9 +98,23 @@ end
 -- answer counts), or under a Combat, Encounter, ChallengeMode, PvPMatch, or
 -- Map AddOn restriction. Shard deletion and the Healthstone trade check it at
 -- each call and wait instead.
-local MOVE_RESTRICTIONS = {"Combat", "Encounter", "ChallengeMode", "PvPMatch", "Map"}
+--
+-- 1.12.2 (John: "Try delete under Map"): the hard part (combat and the first
+-- four) and the Map part are separate, because a dungeon may set Map for the
+-- whole visit and it is not known whether Map blocks DeleteCursorItem. Only the
+-- right-click trim tries under Map alone; everything else waits as before.
+local HARD_RESTRICTIONS = {"Combat", "Encounter", "ChallengeMode", "PvPMatch"}
 
-function WTF.MoveRestricted()
+local function RestrictionActive(name)
+    local kinds = type(Enum) == "table" and Enum.AddOnRestrictionType
+    if type(C_RestrictedActions) ~= "table" or type(C_RestrictedActions.IsAddOnRestrictionActive) ~= "function"
+        or type(kinds) ~= "table" or kinds[name] == nil then
+        return false
+    end
+    return C_RestrictedActions.IsAddOnRestrictionActive(kinds[name]) == true
+end
+
+function WTF.HardRestricted()
     if InCombatLockdown() then
         return true
     end
@@ -110,17 +124,20 @@ function WTF.MoveRestricted()
             return true
         end
     end
-    local kinds = type(Enum) == "table" and Enum.AddOnRestrictionType
-    if type(C_RestrictedActions) ~= "table" or type(C_RestrictedActions.IsAddOnRestrictionActive) ~= "function"
-        or type(kinds) ~= "table" then
-        return false
-    end
-    for _, name in ipairs(MOVE_RESTRICTIONS) do
-        if kinds[name] ~= nil and C_RestrictedActions.IsAddOnRestrictionActive(kinds[name]) == true then
+    for _, name in ipairs(HARD_RESTRICTIONS) do
+        if RestrictionActive(name) then
             return true
         end
     end
     return false
+end
+
+function WTF.MapRestricted()
+    return RestrictionActive("Map")
+end
+
+function WTF.MoveRestricted()
+    return WTF.HardRestricted() or WTF.MapRestricted()
 end
 
 -- Dyre's Toolkit (author-approved, 2026-10-19): one layout mode, grid, and
@@ -153,16 +170,22 @@ function WTF.Toolkit()
     return toolkit, "ok"
 end
 
--- Features that moved out of WTF in 1.3.0 (author-approved): the shield
--- display to Dyre's Shields Up; the cooldown chimes, the Nightfall sound,
--- and the Demon Armor reminder to Dyre's Buff Reminders. CurseForge lists both
--- as required, so the app installs them; the TOC keeps them optional, so WTF
+-- Features that moved out of WTF (author-approved): in 1.3.0 the shield
+-- display to Dyre's Shields Up, and the cooldown chimes, the Nightfall sound,
+-- and the Demon Armor reminder to Dyre's Buff Reminders; in 1.11.0 (John,
+-- 2026-11-20: "Yes, full move") the DoT tracker, the nameplate DoT dots, DoT
+-- damage prediction, the smart curse, and the Control bar with its macros
+-- and announcements to Dyre's Debuff Tracker. CurseForge lists them as
+-- required, so the app installs them; the TOC keeps them optional, so WTF
 -- loads without them and says once per session, at login, what to install
 -- or enable (CurseForge only).
+WTF.DDT_FEATURES = WTF.T("the DoT tracker, DoT colors, nameplate DoT dots, DoT damage prediction, the smart curse, "
+    .. "and the Control bar with its macros and announcements")
 WTF.MOVED_TO = {
     {addon = "DyresShieldsUp", title = "Dyre's Shields Up", what = WTF.T("the shield display")},
     {addon = "DyresBuffReminders", title = "Dyre's Buff Reminders",
         what = WTF.T("the cooldown chimes, the Nightfall sound, and the Demon Armor reminder")},
+    {addon = "DyresDebuffTracker", title = "Dyre's Debuff Tracker", what = WTF.DDT_FEATURES},
 }
 
 -- "loaded", "disabled" (installed but not enabled), or "missing".
@@ -230,19 +253,11 @@ local REQUIRED_NAMESPACE = {
     "CheckStoneCapabilities", "InitializeStones", "ResetStonesPosition", "ReportStoneDebug", "RefreshStonesMover",
     "ReportStoneStatus", "RemindStones", "ApplyStoneMacros", "AddInputHandler", "RunOnNextInput", "ReportClickDebug",
     "Warn", "RegisterMovable", "BeginDrag", "EndDrag", "ScaleKeepingCenter",
-    "CharacterMacrosAvailable", "WriteCharacterMacro",
-    "DeleteCharacterMacro", "ApplyControlMacros",
-    "InitializeControl", "RefreshControl", "ResetControlPosition", "ReportControlDebug", "SanitizeControl", "InitializeAnnounce", "FormatAnnouncement", "ReportAnnounceDebug", "DebugEmote", "FriendlyTargetNames",
+    "CharacterMacrosAvailable", "WriteCharacterMacro", "DeleteCharacterMacro",
+    "InitializeAnnounce", "FormatAnnouncement", "ReportAnnounceDebug", "DebugEmote", "FriendlyTargetNames",
     "WhisperHealthstoneGift",
-    "CheckTrackerCapabilities", "InitializeTracker", "ResetTrackerPosition", "RefreshTracker",
-    "ReportTrackerDebug", "TrackerCandidateFilters", "TrackerKnowsSlot", "SetTrackerTheme",
-    "InitializePlateDots", "RefreshPlateDots", "HasTrackableDots", "ApplyTrackerColors", "ApplyDotColors",
-    "InitializePredict", "RefreshPredict", "PredictAvailable", "ReportPredictDebug", "DotTracker",
-    "SmartCurseAvailable", "ApplyCurseMacro", "SetCurseMode", "SetCurseMarker",
     "SetStonesScale", "SetShardCounterScale",
-    "TrackerOutlineAvailable", "SetTrackerOutlineWidth", "TrackerPanelsAvailable", "SetTrackerPanelShown",
-    "RefreshTrackerPrediction", "InitializeWarnings",
-    "ReportRestrictions", "ResetFocusWorks", "InitializeProbe", "InitializeOptions", "OpenSettings",
+    "ReportRestrictions", "InitializeProbe", "InitializeOptions", "OpenSettings",
 }
 
 local function CheckInstalledFiles()
@@ -321,10 +336,6 @@ end
 -- Chat messages longer than this are cut by the client.
 WTF.ANNOUNCE_MAX_LENGTH = 255
 
--- The English default texts credit WTF (author-approved), so players you group
--- with can find it; a text you edit says only what you wrote. The Chinese set
--- leaves the credit out (the player's request; MIT asks for none in messages).
--- Both sets live in Locales.lua.
 WTF.ANNOUNCE_DEFAULTS = WTF.L.announceDefaults
 -- Saved copies of earlier defaults, never edited, become the new ones.
 local OLD_ANNOUNCE_DEFAULTS = {
@@ -405,232 +416,18 @@ function WTF.SanitizeAnnouncement(text, default)
     return text
 end
 
--- Tracker and nameplate slots, in display order, with default colors as the
--- Settings color swatch stores them (AARRGGBB), and whether each is a DoT to
--- keep up (crowd control is not). Every slot shows as a nameplate dot by
--- default (author, 1.2.0).
-WTF.DOT_SLOTS = {
-    {key = "curse", label = WTF.T("Curse"), color = "ff9e40d9", dot = true},
-    {key = "bane", label = WTF.T("Bane"), color = "ffe62626", dot = true},
-    {key = "corruption", label = WTF.T("Corruption"), color = "ffffffff", dot = true},
-    {key = "immolate", label = WTF.T("Immolate"), color = "ffff8019", dot = true},
-    {key = "siphon", label = WTF.T("Siphon Life"), color = "ff4dd94d", dot = true},
-    {key = "control", label = WTF.T("Fear and control"), color = "ffffd91a", dot = false},
-}
-
--- The DoT order (author-approved, player request: configurable, with the
--- rotation order above as the default): every slot key once. Unknown or
--- doubled keys are dropped and missing ones added in the default order.
-function WTF.SanitizeDotOrder(value)
-    local valid, seen, order = {}, {}, {}
-    for _, slot in ipairs(WTF.DOT_SLOTS) do
-        valid[slot.key] = true
-    end
-    if type(value) == "table" then
-        for _, key in ipairs(value) do
-            if valid[key] and not seen[key] then
-                seen[key] = true
-                order[#order + 1] = key
-            end
-        end
-    end
-    for _, slot in ipairs(WTF.DOT_SLOTS) do
-        if not seen[slot.key] then
-            order[#order + 1] = slot.key
-        end
-    end
-    return order
-end
-
--- WTF.DOT_SLOTS in the saved order.
-function WTF.OrderedDotSlots()
-    local byKey, slots = {}, {}
-    for _, slot in ipairs(WTF.DOT_SLOTS) do
-        byKey[slot.key] = slot
-    end
-    for _, key in ipairs(WTF.db.tracker.order) do
-        slots[#slots + 1] = byKey[key]
-    end
-    return slots
-end
-
--- Defaults that changed (author-approved): once, a slot still on its old
--- default moves to the new one; a color the user picked stays, also later.
-local OLD_DEFAULT_COLORS = {curse = "ff4d8cff", corruption = "ff9e40d9"}
-local COLORS_VERSION = 2
-
-function WTF.SanitizeColor(value, default)
-    if type(value) == "string" and value:match("^%x%x%x%x%x%x%x%x$") then
-        return value:lower()
-    end
-    return default
-end
-
--- A saved AARRGGBB color as r, g, b from 0 to 1 (its alpha is not used).
-local function HexColor(hex)
-    return tonumber(hex:sub(3, 4), 16) / 255, tonumber(hex:sub(5, 6), 16) / 255, tonumber(hex:sub(7, 8), 16) / 255
-end
-
-function WTF.SlotColor(key)
-    return HexColor(WTF.db.tracker.colors[key])
-end
-
--- DoT tracker panel colors (author-approved, player request): each colors its
--- panel's outline or row border and its health fill. Defaults are the colors
--- before 1.2.0: the warlock class color, red, and the others' dark grey.
-WTF.TRACKER_PANEL_COLORS = {
-    {key = "target", label = WTF.T("Target panel color"), color = "ff8787ed"},
-    {key = "focus", label = WTF.T("Focus panel color"), color = "ffe61a1a"},
-    {key = "list", label = WTF.T("Other mobs panel color"), color = "ff545454"},
-}
-
-function WTF.PanelColor(key)
-    return HexColor(WTF.db.tracker.panelColors[key])
-end
-
-WTF.PLATE_DOTS_OFFSET_MIN = 0
-WTF.PLATE_DOTS_OFFSET_MAX = 120
--- Clears the name and EllesmereUI's debuff icons above it (author-tested in client:
--- 4 covered the name, 40 the icons, 50 cleared both).
-WTF.DEFAULT_PLATE_DOTS_OFFSET = 50
-
-function WTF.SanitizePlateDotsOffset(value)
-    if not IsWholeNumber(value) then
-        return WTF.DEFAULT_PLATE_DOTS_OFFSET
-    end
-    return math.max(WTF.PLATE_DOTS_OFFSET_MIN, math.min(WTF.PLATE_DOTS_OFFSET_MAX, value))
-end
-
--- A whole number within min and max, else the default.
-function WTF.SanitizeWhole(value, minValue, maxValue, default)
-    if not IsWholeNumber(value) then
-        return default
-    end
-    return math.max(minValue, math.min(maxValue, value))
-end
-
--- DoT tracker panel opacity, per panel (author-approved: its own setting for
--- the target, focus, and other-mobs panels), in percent; 100 is today's look.
-WTF.TRACKER_PANELS = {
-    {key = "target", heading = WTF.T("Target"), name = WTF.T("target panel"),
-        label = WTF.T("Target panel opacity")},
-    {key = "focus", heading = WTF.T("Focus"), name = WTF.T("focus panel"),
-        label = WTF.T("Focus panel opacity")},
-    {key = "list", heading = WTF.T("Others"), name = WTF.T("other mobs' panel"),
-        label = WTF.T("Other mobs panel opacity")},
-}
-WTF.PANEL_OPACITY_MIN = 10
-WTF.PANEL_OPACITY_MAX = 100
-WTF.DEFAULT_PANEL_OPACITY = 100
-
--- The pinned target and focus rows' solid outline, in whole pixels (John,
--- 2026-11-11, from a player asking to hide it; Dyre's Toolkit 2.8.0 draws it
--- and has the same range in TRACKER_OUTLINE). 0 draws none; 3 is the old look.
-WTF.OUTLINE_WIDTH_MIN = 0
-WTF.OUTLINE_WIDTH_MAX = 20
-WTF.DEFAULT_OUTLINE_WIDTH = 3
-
--- Nameplate DoT dot opacity, in percent (author-approved: 100, today's look).
-WTF.PLATE_DOTS_OPACITY_MIN = 10
-WTF.PLATE_DOTS_OPACITY_MAX = 100
-WTF.DEFAULT_PLATE_DOTS_OPACITY = 100
-
--- DoT tracker sizes per theme (author-approved, player request), saved per
--- theme; the defaults are the sizes the themes always had. Text size is a
--- percent of each font's own size. No free offsets: the name sits in one of a
--- few places, so every layout is a tested one.
-WTF.TRACKER_SIZE_SPECS = {
-    compact = {
-        {key = "iconSize", label = WTF.T("Icon size"), min = 16, max = 40, step = 1, default = 22},
-        {key = "nameWidth", label = WTF.T("Name width"), min = 60, max = 200, step = 5, default = 110,
-            tooltip = WTF.T("The room the name has beside the icons (name Left or Right): the row grows or "
-                .. "shrinks with it. A longer name is cut with \"...\". Above or below the icons, the name spans "
-                .. "the row.")},
-        {key = "textScale", label = WTF.T("Text size"), min = 50, max = 200, step = 5, default = 100, percent = true},
-    },
-    bars = {
-        {key = "barWidth", label = WTF.T("Bar width"), min = 150, max = 500, step = 10, default = 290},
-        {key = "lineHeight", label = WTF.T("Line height"), min = 12, max = 28, step = 1, default = 16},
-        {key = "textScale", label = WTF.T("Text size"), min = 50, max = 200, step = 5, default = 100, percent = true},
-    },
-}
-WTF.TRACKER_NAME_POSITIONS = {
-    compact = {{key = "left", label = WTF.T("Left")}, {key = "right", label = WTF.T("Right")},
-        {key = "above", label = WTF.T("Above")}, {key = "below", label = WTF.T("Below")}},
-    bars = {{key = "above", label = WTF.T("Above")}, {key = "below", label = WTF.T("Below")}},
-}
-
--- The DoT prediction block's look (John, 1.4.0), the same on every bar:
--- the fill, a color preset, its opacity, and a thin outline.
-WTF.PREDICT_FILLS = {{key = "stripes", label = WTF.T("Stripes")},
-    {key = "solid", label = WTF.T("Solid", "fill")}, {key = "bar", label = WTF.T("Bar texture")}}
-WTF.PREDICT_COLORS = {
-    {key = "purple", label = WTF.T("Purple"), color = {0.64, 0.21, 0.93}},
-    {key = "red", label = WTF.T("Red"), color = {1, 0.15, 0.15}},
-    {key = "orange", label = WTF.T("Orange"), color = {1, 0.55, 0.1}},
-    {key = "white", label = WTF.T("White"), color = {1, 1, 1}},
-    {key = "green", label = WTF.T("Green"), color = {0.25, 0.9, 0.3}},
-}
-WTF.PREDICT_OUTLINES = {{key = "none", label = WTF.T("None")},
-    {key = "solid", label = WTF.T("Solid", "outline")}}
-WTF.PREDICT_OPACITY_MIN = 20
-WTF.PREDICT_OPACITY_MAX = 100
-WTF.DEFAULT_PREDICT_OPACITY = 70
--- Where DIES goes (John, 2026-11-09), apart for the target and focus frames
--- and for nameplates: Auto is the Toolkit's choice (left of a unit frame's
--- bar, right of a nameplate's, the other side when that one is taken); X and
--- Y move it from there, in pixels, right and up positive.
-WTF.DIES_PLACES = {{key = "auto", label = WTF.T("Auto")},
-    {key = "left", label = WTF.T("Left of the bar")}, {key = "right", label = WTF.T("Right of the bar")},
-    {key = "center", label = WTF.T("Center of the bar")}, {key = "above", label = WTF.T("Above the bar")},
-    {key = "below", label = WTF.T("Below the bar")},
-    {key = "inside", label = WTF.T("Inside the bar's right end")}}
-WTF.DIES_OFFSET_MIN = -100
-WTF.DIES_OFFSET_MAX = 100
-
--- A saved key that is one of the choices, else the first or the default.
-function WTF.SanitizeChoice(value, choices, default)
-    for _, choice in ipairs(choices) do
-        if value == choice.key then
-            return value
-        end
-    end
-    return default or choices[1].key
-end
-
--- The tracker's health text choices; None by default.
-WTF.TRACKER_HEALTH_TEXTS = {{key = "none", label = WTF.T("None")},
-    {key = "number", label = WTF.T("Number")}, {key = "percent", label = WTF.T("Percent")},
-    {key = "both", label = WTF.T("Number and Percent")}}
-
-function WTF.SanitizeHealthText(value)
-    for _, choice in ipairs(WTF.TRACKER_HEALTH_TEXTS) do
-        if value == choice.key then
-            return value
-        end
-    end
-    return "none"
-end
-
-function WTF.SanitizeTrackerSizes(theme, saved)
-    saved = type(saved) == "table" and saved or {}
-    local sizes = {}
-    for _, spec in ipairs(WTF.TRACKER_SIZE_SPECS[theme]) do
-        sizes[spec.key] = WTF.SanitizeWhole(saved[spec.key], spec.min, spec.max, spec.default)
-    end
-    local positions = WTF.TRACKER_NAME_POSITIONS[theme]
-    sizes.namePosition = positions[1].key
-    for _, position in ipairs(positions) do
-        if saved.namePosition == position.key then
-            sizes.namePosition = position.key
-        end
-    end
-    return sizes
-end
-
 local ANNOUNCE_SWITCHES = {"summonGroup", "summonWhisper", "soulstoneGroup", "soulstoneWhisper",
-    "healthstoneWhisper", "healthstoneEmote", "soulstoneEmote", "fearGroup", "banishGroup", "enslaveGroup",
-    "howlGroup"}
+    "healthstoneWhisper", "healthstoneEmote", "soulstoneEmote"}
+
+-- Saved settings of the features that moved to Dyre's Debuff Tracker in
+-- 1.11.0: WTF keeps them exactly as the last login before 1.11.0 left them,
+-- and never repairs, writes, or deletes them, for Dyre's Debuff Tracker to
+-- copy once (it never writes them either) and for a downgrade. Whole tables
+-- (DDT_TABLES) and the crowd-control announcement switches and texts inside
+-- db.announce (DDT_ANNOUNCE_KEYS; WTF's own announce keys stay live).
+WTF.DDT_TABLES = {"tracker", "predict", "control"}
+WTF.DDT_ANNOUNCE_KEYS = {"fearGroup", "banishGroup", "enslaveGroup", "howlGroup", "fearGroupText",
+    "banishGroupText", "enslaveGroupText", "howlGroupText"}
 
 function WTF.SanitizeDB(db)
     if type(db) ~= "table" then
@@ -661,103 +458,6 @@ function WTF.SanitizeDB(db)
         soulstone = soulstone and type(soulstone.name) == "string" and type(soulstone.ends) == "number"
             and {name = soulstone.name, ends = soulstone.ends} or nil,
     }
-    local tracker = type(db.tracker) == "table" and db.tracker or {}
-    db.tracker = {
-        enabled = tracker.enabled ~= false,
-        -- Where the one tracker frame was: sections not yet dragged stack there.
-        position = SanitizePosition(tracker.position),
-        sections = {},
-        -- Bars by default (author-approved).
-        theme = tracker.theme == "compact" and "compact" or "bars",
-        plateDots = tracker.plateDots == true,
-        plateDotsOffset = WTF.SanitizePlateDotsOffset(tracker.plateDotsOffset),
-        plateDotsOpacity = WTF.SanitizeWhole(tracker.plateDotsOpacity, WTF.PLATE_DOTS_OPACITY_MIN,
-            WTF.PLATE_DOTS_OPACITY_MAX, WTF.DEFAULT_PLATE_DOTS_OPACITY),
-        outlineWidth = WTF.SanitizeWhole(tracker.outlineWidth, WTF.OUTLINE_WIDTH_MIN, WTF.OUTLINE_WIDTH_MAX,
-            WTF.DEFAULT_OUTLINE_WIDTH),
-        sizes = {},
-        panelOpacity = {},
-        -- Mob health (author-approved, player request): off by default.
-        health = tracker.health == true,
-        healthText = WTF.SanitizeHealthText(tracker.healthText),
-        colors = {},
-        onPlates = {},
-        colorsVersion = COLORS_VERSION,
-        panelColors = {},
-        order = WTF.SanitizeDotOrder(tracker.order),
-        -- The smart curse (Toolkit 2.7.0): the pinned Curse slot recasts the
-        -- last curse ("last", default) or the smart pick ("smart"); its letter
-        -- shows unless false.
-        curseMode = tracker.curseMode == "smart" and "smart" or "last",
-        curseMarker = tracker.curseMarker ~= false,
-        -- Hide empty DoT slots (John, 2026-11-17, a player's request; Toolkit
-        -- TRACKER_HIDE_EMPTY): off by default.
-        hideEmpty = tracker.hideEmpty == true,
-        -- Panel switches (John, 2026-11-19, a player's request; Toolkit
-        -- TRACKER_PANELS): each panel shows unless false.
-        show = {},
-        -- Warnings (Warnings.lua): the pinned row flashes 3 s before a DoT of
-        -- yours runs out; the chime stays off.
-        dotWarn = tracker.dotWarn ~= false,
-        warnSound = tracker.warnSound == true,
-    }
-    for _, key in ipairs({"lastBane", "lastCurse", "lastControl"}) do
-        db.tracker[key] = type(tracker[key]) == "string" and tracker[key] or nil
-    end
-    local sizes = type(tracker.sizes) == "table" and tracker.sizes or {}
-    for theme in pairs(WTF.TRACKER_SIZE_SPECS) do
-        db.tracker.sizes[theme] = WTF.SanitizeTrackerSizes(theme, sizes[theme])
-    end
-    local show = type(tracker.show) == "table" and tracker.show or {}
-    for _, panel in ipairs(WTF.TRACKER_PANELS) do
-        db.tracker.show[panel.key] = show[panel.key] ~= false
-    end
-    local panelOpacity = type(tracker.panelOpacity) == "table" and tracker.panelOpacity or {}
-    for _, panel in ipairs(WTF.TRACKER_PANELS) do
-        db.tracker.panelOpacity[panel.key] = WTF.SanitizeWhole(panelOpacity[panel.key], WTF.PANEL_OPACITY_MIN,
-            WTF.PANEL_OPACITY_MAX, WTF.DEFAULT_PANEL_OPACITY)
-    end
-    local sections = type(tracker.sections) == "table" and tracker.sections or {}
-    for _, key in ipairs({"target", "focus", "list"}) do
-        db.tracker.sections[key] = SanitizePosition(sections[key])
-    end
-    local panelColors = type(tracker.panelColors) == "table" and tracker.panelColors or {}
-    for _, panel in ipairs(WTF.TRACKER_PANEL_COLORS) do
-        db.tracker.panelColors[panel.key] = WTF.SanitizeColor(panelColors[panel.key], panel.color)
-    end
-    local colors = type(tracker.colors) == "table" and tracker.colors or {}
-    local onPlates = type(tracker.onPlates) == "table" and tracker.onPlates or {}
-    for _, slot in ipairs(WTF.DOT_SLOTS) do
-        local color = WTF.SanitizeColor(colors[slot.key], slot.color)
-        if (tracker.colorsVersion or 1) < COLORS_VERSION and color == OLD_DEFAULT_COLORS[slot.key] then
-            color = slot.color
-        end
-        db.tracker.colors[slot.key] = color
-        if type(onPlates[slot.key]) == "boolean" then
-            db.tracker.onPlates[slot.key] = onPlates[slot.key]
-        else
-            db.tracker.onPlates[slot.key] = true
-        end
-    end
-    -- DoT damage prediction (John, 1.4.0): on by default, where the Toolkit
-    -- makes a predictor. A test build's "tracker" switch is dropped.
-    local predict = type(db.predict) == "table" and db.predict or {}
-    db.predict = {
-        enabled = predict.enabled ~= false,
-        plates = predict.plates ~= false,
-        dies = predict.dies ~= false,
-        fill = WTF.SanitizeChoice(predict.fill, WTF.PREDICT_FILLS),
-        color = WTF.SanitizeChoice(predict.color, WTF.PREDICT_COLORS),
-        opacity = WTF.SanitizeWhole(predict.opacity, WTF.PREDICT_OPACITY_MIN, WTF.PREDICT_OPACITY_MAX,
-            WTF.DEFAULT_PREDICT_OPACITY),
-        outline = WTF.SanitizeChoice(predict.outline, WTF.PREDICT_OUTLINES, "solid"),
-        diesPlace = WTF.SanitizeChoice(predict.diesPlace, WTF.DIES_PLACES, "auto"),
-        diesX = WTF.SanitizeWhole(predict.diesX, WTF.DIES_OFFSET_MIN, WTF.DIES_OFFSET_MAX, 0),
-        diesY = WTF.SanitizeWhole(predict.diesY, WTF.DIES_OFFSET_MIN, WTF.DIES_OFFSET_MAX, 0),
-        plateDiesPlace = WTF.SanitizeChoice(predict.plateDiesPlace, WTF.DIES_PLACES, "auto"),
-        plateDiesX = WTF.SanitizeWhole(predict.plateDiesX, WTF.DIES_OFFSET_MIN, WTF.DIES_OFFSET_MAX, 0),
-        plateDiesY = WTF.SanitizeWhole(predict.plateDiesY, WTF.DIES_OFFSET_MIN, WTF.DIES_OFFSET_MAX, 0),
-    }
     local announce = type(db.announce) == "table" and db.announce or {}
     local cleanAnnounce = {
         enabled = announce.enabled ~= false,
@@ -773,21 +473,19 @@ function WTF.SanitizeDB(db)
         end
         cleanAnnounce[key] = WTF.SanitizeAnnouncement(text, default)
     end
+    for _, key in ipairs(WTF.DDT_ANNOUNCE_KEYS) do
+        cleanAnnounce[key] = announce[key]
+    end
     db.announce = cleanAnnounce
     -- One lock for every frame (author-approved, as MTF), locked by default;
-    -- each frame reads its own copy, and the tracker shows its sample rows
-    -- while unlocked, since it can only be dragged while it shows.
+    -- each frame reads its own copy.
     -- db.shield, db.chimes, db.alerts, and db.reminders stay exactly as saved
-    -- for one release (author-approved): Dyre's Shields Up and Dyre's Buff
-    -- Reminders copy them once, and a downgrade still finds them.
-    if WTF.SanitizeControl then
-        db.control = WTF.SanitizeControl(db.control, SanitizePosition)
-    end
+    -- (author-approved): Dyre's Shields Up and Dyre's Buff Reminders copy them
+    -- once, and a downgrade still finds them. So do db.tracker, db.predict,
+    -- and db.control (WTF.DDT_TABLES), for Dyre's Debuff Tracker.
     db.locked = db.locked ~= false
     db.grid = db.grid ~= false
     db.stones.locked = db.locked
-    db.tracker.locked = db.locked
-    db.tracker.placeholders = not db.locked
     db.shards.counterLocked = db.locked
     return db
 end
@@ -799,22 +497,23 @@ end
 -- profile (characterKeys, top-level keys only): locked, a copy of the
 -- Toolkit's account-wide lock; shield, chimes, alerts, and reminders, old WTF
 -- data that Dyre's Shields Up and Dyre's Buff Reminders copy once per
--- character. WarlockToolsForeverAccountDB (focusWorks, learned ticks) is
--- account-wide, so it is not in it. No macro names are saved: they are fixed.
-WTF.PROFILE_CHARACTER_KEYS = {"locked", "shield", "chimes", "alerts", "reminders"}
+-- character; tracker, predict, and control, the same for Dyre's Debuff
+-- Tracker (1.11.0). WarlockToolsForeverAccountDB (focusWorks, learned ticks) is account-wide,
+-- so it is not in it. No macro names are saved: they are fixed.
+WTF.PROFILE_CHARACTER_KEYS = {"locked", "shield", "chimes", "alerts", "reminders", "tracker", "predict", "control"}
 
 -- This character's live state inside the settings tables. The engine skips
 -- only top-level keys, so a copy, an import, or the Defaults keep these:
 -- the shards kept since entering an instance, who has your Soulstone and
--- until when, and the last curse, Bane, and control spell the DoT tracker's
--- clicks recast.
+-- until when, and the crowd-control announcement settings kept for Dyre's
+-- Debuff Tracker.
 local PROFILE_STATE = {
     {"shards", "instanceKeep"},
     {"stones", "soulstone"},
-    {"tracker", "lastBane"},
-    {"tracker", "lastCurse"},
-    {"tracker", "lastControl"},
 }
+for _, key in ipairs(WTF.DDT_ANNOUNCE_KEYS) do
+    PROFILE_STATE[#PROFILE_STATE + 1] = {"announce", key}
+end
 
 local function CopyValue(value)
     if type(value) ~= "table" then
@@ -841,20 +540,11 @@ function WTF.SanitizeProfile(settings)
 end
 
 -- After a copy or import, out of combat (the Toolkit refuses one in combat):
--- the engine wrote the new values into WTF.db in place, so the DoT tracker,
--- the control bar, the predictor, and the nameplate dots hold the same
--- tables. Each part reads them again; a secure frame waits out combat.
+-- the engine wrote the new values into WTF.db in place. Each part reads them
+-- again; a secure frame waits out combat.
 function WTF.ApplyProfile()
     WTF.ApplyShardsProfile()
     WTF.ApplyStonesProfile()
-    if WTF.shared then
-        WTF.RefreshPredict()
-        WTF.ApplyTrackerProfile()
-        WTF.ApplyDotColors()
-        WTF.SetPlateDotsOpacity(WTF.db.tracker.plateDotsOpacity)
-        WTF.RefreshPlateDots()
-        WTF.ApplyControlProfile()
-    end
     WTF.RefreshGrid()
 end
 
@@ -1023,18 +713,14 @@ end
 local function SetLockFlags(locked)
     WTF.db.locked = locked
     WTF.db.stones.locked = locked
-    WTF.db.tracker.locked = locked
-    WTF.db.tracker.placeholders = not locked
     WTF.db.shards.counterLocked = locked
 end
 
 -- quiet: Dyre's Toolkit locks every Dyre's AddOn and says one line for all.
 function WTF.SetFramesLocked(locked, quiet)
     SetLockFlags(locked)
-    WTF.RefreshTracker()
     WTF.RefreshStonesMover()
     WTF.RefreshShardCounter()
-    WTF.RefreshControl()
     WTF.RefreshGrid()
     if quiet then
         return
@@ -1068,30 +754,13 @@ end
 -- Before any module registers a frame: with Dyre's Toolkit, its layout moves
 -- WTF's frames (they snap to other Dyre's AddOns' frames and to its grid),
 -- and WTF's lock follows the toolkit's (locked at login). Else Layout.lua's.
--- Dyre's Toolkit 2.4.0's shared files (WTF 1.4.1, John: "Just have WTF use
--- the shared Toolkit files and fix the overlap"): the aura slots (Auras.lua,
--- once WTF's AuraEngine.lua), the plate memory and unit helpers (Units.lua,
--- once Core's), and the DoT prediction's frame adapters and drawing
--- (HealthBars.lua, once Predict.lua's). The TOC keeps the Toolkit optional
--- (family rule; CurseForge requires it): without these, the DoT tracker,
--- the nameplate dots, the Control bar, and the prediction stay off, with
--- one line at login. Only true function fields count, as the Toolkit keeps
--- contract 2 and has no version string.
--- Since WTF 1.5.0 (Toolkit 2.5.0, the engine move) the DoT tracker, the
--- nameplate dots, the prediction, and the Control bar with its macros and
--- announcements are the Toolkit's engines; WTF passes its settings, frame
--- names, and hooks (Tracker, Dots, Predict, Control).
-local SHARED_FUNCTIONS = {
-    "AuraEngineKind", "CreateAuraContainer",
-    "ReadGUID", "ReadName", "IsDead", "LearnPlate", "LearnPlates", "ForgetPlate", "KnownPlate", "PlateGUID",
-    "FindUnit", "LockCast", "FocusWorks", "OnFocusWorks", "LearnFocusWorks", "NoteFocusWorks", "ResetFocusWorks",
-    "FindPlateBar", "FindUnitBar", "UseBar", "PrepareBar", "DrawPrediction", "HidePrediction", "MoveDies",
-    "SpellName", "IndexSpells", "KnowsAny", "PetKnows", "OutOfCombat", "CreateMacroKeeper", "FocusCastMacro",
-    "MarkerCode", "FormatAnnouncement", "CreateAnnouncer", "ClaimOwner", "SetOwnerEnabled", "IsOwner",
-    "CreateControlTracker", "CreateDotTracker", "CreatePlateDots", "CreateDotPredictor",
-}
-local SHARED_MISSING = WTF.T("Install or update Dyre's Toolkit (2.5 or later) from CurseForge for the DoT "
-    .. "tracker, the nameplate DoT dots, the Control bar, and DoT damage prediction: they stay off without it.")
+-- Dyre's Toolkit's shared files (WTF 1.4.1): since 1.11.0 WTF uses only
+-- its announcement fill (Announce.lua; without it, WTF's own) and hands a
+-- true focusWorks flag to its one flag for every Dyre's AddOn, once. The
+-- engines that needed the rest moved to Dyre's Debuff Tracker. Only true
+-- function fields count, as the Toolkit keeps contract 2 and has no version
+-- string.
+local SHARED_FUNCTIONS = {"FormatAnnouncement", "NoteFocusWorks"}
 
 function WTF.SharedToolkit()
     local toolkit = rawget(_G, "DyresToolkit")
@@ -1109,20 +778,13 @@ function WTF.SharedToolkit()
     return toolkit
 end
 
--- The shared files stand in for WTF's own copies, under the same names the
--- modules call. focusWorks moves to the Toolkit's one flag for every Dyre's
--- AddOn, once: a true WTF flag (which already holds a 1.3.3 test build's
--- per-character one) is noted there, then dropped. Without the Toolkit WTF's
--- own flag stays for a later login.
+-- Without the Toolkit, WTF's own flag stays for a later login.
 local function UseShared()
     local shared = WTF.SharedToolkit()
     WTF.shared = shared
     if not shared then
-        WTF.Report(SHARED_MISSING)
         return
     end
-    WTF.AuraEngineKind = shared.AuraEngineKind
-    WTF.AURA_ENGINE_MISSING = shared.AURA_ENGINE_MISSING
     if WTF.accountDB.focusWorks == true then
         shared.NoteFocusWorks()
     end
@@ -1153,16 +815,21 @@ local function JoinToolkit()
         openSettings = WTF.OpenSettings})
 end
 
--- /wtf reset: the Stones bar, the DoT tracker, and the shard counter back to their default places.
+-- /wtf reset: the Stones bar and the shard counter back to their default places.
 function WTF.ResetPositions()
     WTF.ResetShardCounterPosition()
     WTF.ResetStonesPosition()
-    WTF.ResetTrackerPosition()
-    WTF.ResetControlPosition()
     if InCombatLockdown() then
         WTF.Report(WTF.T("WTF frames move back to their default places after combat."))
     end
 end
+
+-- The Bindings.xml shim (1.11.0, one release; lead-approved): the old smart
+-- curse binding stays defined, with no button behind it, so the game keeps a
+-- player's key until Dyre's Debuff Tracker moves it to its own command. These
+-- are its Key Bindings header and label. A later release removes all three.
+BINDING_HEADER_WARLOCKTOOLSFOREVER = DEFAULT_TITLE
+_G["BINDING_NAME_CLICK WarlockToolsForeverSmartCurse:LeftButton"] = WTF.T("Smart curse (moved to Dyre's Debuff Tracker)")
 
 SLASH_WARLOCKTOOLSFOREVER1 = PRIMARY_SLASH
 SLASH_WARLOCKTOOLSFOREVER2 = BACKUP_SLASH
@@ -1170,29 +837,15 @@ SlashCmdList[SLASH_KEY] = WTF.HandleCommand
 
 -- Account-wide settings, one set per client install (shared with MTF):
 -- focusWorks, which only true survives. A 1.3.3 test build kept it per
--- character in db.control; a true one is carried over once, and SanitizeControl
--- drops the old key.
+-- character in db.control; a true one is carried over once.
 -- ticks: DoT prediction's learned ticks, {[rank spell ID] = {tick = average,
--- power = spell power it was learned at}}; damaged entries are dropped.
-local function LoadTicks(saved)
-    local ticks = {}
-    if type(saved) ~= "table" then
-        return ticks
-    end
-    for id, entry in pairs(saved) do
-        if type(id) == "number" and type(entry) == "table" and type(entry.tick) == "number" and entry.tick > 0
-                and type(entry.power) == "number" and entry.power >= 0 then
-            ticks[id] = {tick = entry.tick, power = entry.power}
-        end
-    end
-    return ticks
-end
-
+-- power = spell power it was learned at}}, handed to the Toolkit since 1.5.0;
+-- since 1.11.0 kept exactly as saved, for Dyre's Debuff Tracker.
 local function LoadAccountDB(saved, character)
     saved = type(saved) == "table" and saved or {}
     local old = type(character) == "table" and type(character.control) == "table"
         and character.control.focusWorks == true
-    return {focusWorks = (saved.focusWorks == true or old) or nil, ticks = LoadTicks(saved.ticks)}
+    return {focusWorks = (saved.focusWorks == true or old) or nil, ticks = saved.ticks}
 end
 
 local function LoadDB()
@@ -1235,6 +888,9 @@ events:SetScript("OnEvent", function(self, event, loadedName)
         WTF.Report(message)
         return
     end
+    -- Dyre's Debuff Tracker says in chat what it copied from WTF; WTF says
+    -- nothing more about the 1.11.0 move (one line only, as MTF). Without it,
+    -- ReportMovedFeatures says to install it.
     WTF.ReportMovedFeatures()
     -- Called directly rather than from each file's own PLAYER_LOGIN handler,
     -- so startup never depends on event handler order.
@@ -1245,15 +901,6 @@ events:SetScript("OnEvent", function(self, event, loadedName)
     WTF.InitializeShards()
     WTF.InitializeStones()
     WTF.InitializeAnnounce()
-    if WTF.shared then
-        -- The predictor first: the DoT tracker's rows draw its damage.
-        WTF.InitializePredict()
-        WTF.InitializeTracker()
-        WTF.InitializeControl()
-        WTF.InitializePlateDots()
-        -- After the tracker and the Control bar: it overlays their frames.
-        WTF.InitializeWarnings()
-    end
     WTF.InitializeProbe()
     WTF.InitializeOptions()
     JoinToolkit()

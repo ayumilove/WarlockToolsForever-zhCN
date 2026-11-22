@@ -28,9 +28,9 @@ local enUS = {
     },
     announcePage = {
         title = "Announce",
-        help = "%T is the target's full name (for control spells, the mob), %Z your zone, and %M the mob's raid "
-            .. "marker (for a Banish at your focus; else nothing). Press Enter to keep an edit, Escape to undo it. "
-            .. "Nothing is sent for yourself or for a cast that fails.",
+        help = "%T is the target's full name and %Z your zone. Press Enter to keep an edit, Escape to undo it. "
+            .. "Nothing is sent for yourself or for a cast that fails. The Fear and Banish announcements moved "
+            .. "to Dyre's Debuff Tracker (the Control page).",
         channelLabel = "Group messages go to",
         channelGroup = "Raid or party (nothing when alone)",
         channelSay = "Say (the game may block it outdoors)",
@@ -78,8 +78,8 @@ local zhCN = {
     },
     announcePage = {
         title = "通报",
-        help = "%T 是目标的全名（控制技能则是怪物名），%Z 是你的区域，%M 是怪物的团队标记（对焦点放逐时才有；"
-            .. "否则为空）。按回车保存修改，按 Esc 撤销。对自己施放或施放失败时不会发送任何消息。",
+        help = "%T 是目标的全名，%Z 是你的区域。按回车保存修改，按 Esc 撤销。对自己施放或施放失败时不会发送任何"
+            .. "消息。恐惧与放逐的通报已移到 Dyre's Debuff Tracker（控制页）。",
         channelLabel = "团队消息发送到",
         channelGroup = "团队或小队（单人时不发送）",
         channelSay = "说（野外可能被系统拦截）",
@@ -216,9 +216,22 @@ local zhText = {
     ["Open Reminder settings"] = "打开提醒设置",
     ["The Demon Armor reminder"] = "恶魔护甲提醒",
     ["Install %s from CurseForge for %s."] = "请从 CurseForge 安装 %s，以恢复%s。",
-    ["%s moved to %s in WTF 1.3.0. This opens its settings."] = "%s已在 WTF 1.3.0 移到 %s。点击打开它的设置。",
+    ["%s moved to %s in WTF %s. This opens its settings."] = "%s已在 WTF %s 中移到 %s。点击打开它的设置。",
     ["%s (moved to %s)"] = "%s（已移到 %s）",
-    ["%s moved to %s in WTF 1.3.0. %s"] = "%s已在 WTF 1.3.0 移到 %s。%s",
+    ["%s moved to %s in WTF %s. %s"] = "%s已在 WTF %s 中移到 %s。%s",
+    ["Open Debuff Tracker settings"] = "打开 Debuff Tracker 设置",
+    ["DoT tracker and damage prediction"] = "持续伤害追踪与伤害预测",
+    ["The DoT tracker, DoT damage prediction, and the smart curse"] =
+        "持续伤害追踪、持续伤害预测与智能诅咒",
+    ["DoT colors, order, and nameplate dots"] = "持续伤害颜色、顺序与姓名板圆点",
+    ["The DoT colors, order, and nameplate DoT dots"] = "持续伤害颜色、顺序与姓名板圆点",
+    ["Control bar, macros, and announcements"] = "控制条、宏与通报",
+    ["The Control bar, \"! Fear\", \"! Banish\", \"! Seduction\", and the Fear and Banish announcements"] =
+        "控制条、\"! Fear\"、\"! Banish\"、\"! Seduction\"，以及恐惧与放逐通报",
+    ["the DoT tracker, DoT colors, nameplate DoT dots, DoT damage prediction, the smart curse, "
+        .. "and the Control bar with its macros and announcements"] =
+        "持续伤害追踪、颜色与姓名板圆点、伤害预测、智能诅咒，以及带宏与通报的控制条",
+    ["Smart curse (moved to Dyre's Debuff Tracker)"] = "智能诅咒（已移到 Dyre's Debuff Tracker）",
     -- Options: Alerts page, the proc's owner (1.10.1)
     ["%s arcs and sound"] = "%s弧线与音效",
     ["Open settings"] = "打开设置",
@@ -366,23 +379,6 @@ local zhText = {
             .. "开启后，点击目标或焦点行不会补放持续伤害，也不显示智能诅咒字母。",
     [" With Curse slot click set to Smart curse, the smart curse still works from its key binding and the \"! Curse\" macro."] =
         " 当诅咒栏位点击设为“智能诅咒”时，智能诅咒仍可通过其按键绑定和“! Curse”宏使用。",
-    -- Options: warnings (Warnings.lua)
-    ["Warn before a DoT runs out"] = "DoT 快没时提醒",
-    ["Flash the target or focus row 3 seconds before a DoT you cast runs out. It counts from your cast, "
-        .. "so a dispel or an early break can make it wrong."] =
-        "你上的 DoT 还剩 3 秒时，目标或焦点行闪一下。按你自己的施法时间计算，"
-            .. "被驱散或提前消失时可能会误报。",
-    ["Chime with warnings"] = "提醒时响一声",
-    ["Play a chime with the DoT and Banish warnings."] = "DoT 和放逐的提醒都会响一声。",
-    -- Tracker rows: the pinned tags and the name click
-    ["Click to select this mob."] = "左键点击：选中这只怪",
-    ["In combat the game does not let an AddOn change your target; click the mob's nameplate."] =
-        "战斗中游戏不允许插件替你切换目标，请点它的姓名板。",
-    ["Warn before Banish ends"] = "放逐快结束时提醒",
-    ["Flash the Control bar 3 seconds before your Banish runs out. It counts from your cast, so an early "
-        .. "break can make it wrong."] =
-        "你的放逐还剩 3 秒时，控制条闪一下。按你自己的施法时间计算，"
-            .. "怪物提前挣脱时可能会误报。",
     ["In combat, a bubble above each hostile nameplate with a dot per DoT you know: colored while it is up, "
         .. "grey while it is missing. Needs at least one DoT you know. The DoTs page chooses the dots."] =
         "战斗中，在每个敌对姓名板上方显示一个气泡，你掌握的每个持续伤害对应一个圆点：存在时显示颜色，"
@@ -532,24 +528,22 @@ local zhText = {
         "为你恐惧或放逐的怪物显示计时条，并在上方显示带有焦点恐惧的焦点框。点击焦点框可再次恐惧你的焦点，"
             .. "点击放逐行可再次放逐你的焦点。",
     ["Unlock frames to move them"] = "解锁框体以移动",
-    ["Outline the Stones bar and the shard counter, and show sample DoT tracker rows, so you can drag "
+    ["Outline the Stones bar and the shard counter, so you can drag "
         .. "them; untick to lock them again. /wtf unlock and /wtf lock do the same, and /wtf reset moves "
         .. "them back."] =
-        "为石头栏和碎片计数器显示轮廓，并显示持续伤害追踪的示例行，以便拖动；取消勾选可重新锁定。"
+        "为石头栏和碎片计数器显示轮廓，以便拖动；取消勾选可重新锁定。"
             .. "/wtf unlock 和 /wtf lock 作用相同，/wtf reset 可将它们移回原位。",
     ["Show a grid while unlocked"] = "解锁时显示网格",
     ["While frames are unlocked, draw a faint grid over the screen with the center lines in red, so you can "
         .. "line frames up."] =
         "解锁框体时，在屏幕上绘制淡淡的网格，中心线为红色，方便对齐框体。",
     -- Commands
-    ["Use /wtf, /wtf options, /wtf shards, /wtf stones, /wtf unlock, /wtf lock, /wtf reset, /wtf reset_focus, "
-        .. "/wtf debug_shards, /wtf debug_delete, /wtf debug_stones, /wtf debug_click, /wtf debug_tracker, "
-        .. "/wtf debug_predict, /wtf debug_control, /wtf debug_announce, /wtf debug_emote, or "
-        .. "/wtf debug_restrictions."] =
+    ["Use /wtf, /wtf options, /wtf shards, /wtf stones, /wtf unlock, /wtf lock, /wtf reset, "
+        .. "/wtf debug_shards, /wtf debug_delete, "
+        .. "/wtf debug_stones, /wtf debug_click, /wtf debug_announce, /wtf debug_emote, or /wtf debug_restrictions."] =
         "使用 /wtf、/wtf options、/wtf shards、/wtf stones、/wtf unlock、/wtf lock、/wtf reset、"
-            .. "/wtf reset_focus、/wtf debug_shards、/wtf debug_delete、/wtf debug_stones、/wtf debug_click、"
-            .. "/wtf debug_tracker、/wtf debug_predict、/wtf debug_control、/wtf debug_announce、"
-            .. "/wtf debug_emote 或 /wtf debug_restrictions。",
+            .. "/wtf debug_shards、/wtf debug_delete、/wtf debug_stones、/wtf debug_click、"
+            .. "/wtf debug_announce、/wtf debug_emote 或 /wtf debug_restrictions。",
     ["Warlock Tools Forever is unavailable. Check the WTF login message."] =
         "Warlock Tools Forever 当前不可用。请查看登录时的 WTF 提示。",
     -- Shards
@@ -561,6 +555,22 @@ local zhText = {
     ["the cursor did not hold one Soul Shard, so nothing was deleted"] =
         "光标上没有一枚灵魂碎片，因此未删除任何东西",
     ["Deleted a Soul Shard above your limit of %d."] = "已删除一枚超出上限 %d 的灵魂碎片。",
+    ["No Soul Shards above your limit of %d."] = "没有超出上限 %d 的灵魂碎片。",
+    ["Soul Shards above your limit go after combat."] = "超出上限的灵魂碎片会在战斗结束后删除。",
+    ["Deleting %d Soul Shards above your limit of %d, one per key press or click."] =
+        "正在删除 %d 枚超出上限 %d 的灵魂碎片，每按一次键或点击一次删除一枚。",
+    ["The game does not let AddOns delete items in this dungeon. "
+        .. "Shards above your limit go when you leave it."] =
+        "游戏不允许插件在此副本中删除物品。超出上限的灵魂碎片会在你离开副本后删除。",
+    ["Right-click: delete shards above your limit (none now)"] =
+        "右键：删除超出上限的灵魂碎片（现在没有）",
+    ["Right-click: delete 1 shard above your limit"] = "右键：删除 1 枚超出上限的灵魂碎片",
+    ["Right-click: delete %d shards above your limit"] = "右键：删除 %d 枚超出上限的灵魂碎片",
+    ["%T is the target's full name and %Z your zone. Press Enter to keep an edit, Escape to undo it. "
+        .. "Nothing is sent for yourself or for a cast that fails. The Fear and Banish announcements moved "
+        .. "to Dyre's Debuff Tracker (the Control page)."] =
+        "%T 是目标的全名，%Z 是你的区域。按回车保存修改，按 Esc 撤销。对自己施放或施放失败时不会发送任何"
+            .. "消息。恐惧与放逐的通报已移到 Dyre's Debuff Tracker（控制页）。",
     ["Drain Soul was not found, so Soul Shard deletion stays off. Run /wtf debug_shards."] =
         "未找到吸取灵魂，因此灵魂碎片删除保持关闭。可运行 /wtf debug_shards。",
     ["%d of %d (%s limit)"] = "%d / %d（%s）",

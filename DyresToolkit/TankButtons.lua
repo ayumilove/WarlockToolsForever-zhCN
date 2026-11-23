@@ -72,10 +72,10 @@ function DTT.MarkLine(units, marker)
 end
 
 DTT.PING_TYPES = {
-    {key = "attack", name = "Attack", label = "Attack", short = "ATK", condition = "[@target,harm,exists]"},
-    {key = "warning", name = "Warning", label = "Warning", short = "WARN", condition = "[@target,exists]"},
-    {key = "assist", name = "Assist", label = "Assist", short = "HELP", condition = "[@target,exists]"},
-    {key = "onmyway", name = "Onmyway", label = "On my way", short = "OMW", condition = "[@target,exists]"},
+    {key = "attack", name = "Attack", label = ns.T("Attack"), short = ns.T("ATK"), condition = "[@target,harm,exists]"},
+    {key = "warning", name = "Warning", label = ns.T("Warning"), short = ns.T("WARN"), condition = "[@target,exists]"},
+    {key = "assist", name = "Assist", label = ns.T("Assist"), short = ns.T("HELP"), condition = "[@target,exists]"},
+    {key = "onmyway", name = "Onmyway", label = ns.T("On my way"), short = ns.T("OMW"), condition = "[@target,exists]"},
 }
 
 function DTT.PingLine(kind)
@@ -206,9 +206,9 @@ function DTT.ApplyMarkerOrder()
 end
 
 local function CreateNextButton()
-    local button = SecureButton("NextMarker", "Next marker",
-        "Puts the next marker on the mob under your mouse, else your target: skull, then cross, square... "
-            .. "The order starts again after combat.", nil)
+    local button = SecureButton("NextMarker", ns.T("Next marker"),
+        ns.T("Puts the next marker on the mob under your mouse, else your target: skull, then cross, square... "
+            .. "The order starts again after combat."), nil)
     header = CreateFrame("Frame", nil, UIParent, "SecureHandlerBaseTemplate")
     SecureHandlerWrapScript(button, "OnClick", header, DTT.NEXT_MARKER_SNIPPET)
     button:HookScript("PostClick", ShowNextIcon)
@@ -217,9 +217,10 @@ end
 
 local function CreatePullButton()
     local button = CreateFrame("Button", PREFIX .. "Pull", bar)
-    Decorate(button, "Pull countdown", "Starts the pull countdown (DBM or BigWigs when loaded). Set its "
-        .. "length in the settings, or type /dtt pull 10.")
-    button.label:SetText("PULL")
+    Decorate(button, ns.T("Pull countdown"),
+        ns.T("Starts the pull countdown (DBM or BigWigs when loaded). Set its length in the settings, or type "
+            .. "/dtt pull 10."))
+    button.label:SetText(ns.T("PULL"))
     button:SetScript("OnClick", function() DTT.StartPull() end)
     return button
 end
@@ -329,20 +330,20 @@ function DTT.ResetBar()
         return
     end
     bar:ResetPosition()
-    DTT.Report("The tank button bar is back in its first place.")
+    DTT.Report(ns.T("The tank button bar is back in its first place."))
 end
 
 local function BindingNames()
     _G.BINDING_HEADER_DYRESTOOLKIT = "Dyre's Toolkit"
     local names = {
-        Skull = "Skull your target",
-        SkullMouseover = "Skull the mob under your mouse",
-        NextMarker = "Next marker (mouse, else target)",
-        MarkPing = "Skull and ping Attack on your target",
-        Pull = "Pull countdown",
+        Skull = ns.T("Skull your target"),
+        SkullMouseover = ns.T("Skull the mob under your mouse"),
+        NextMarker = ns.T("Next marker (mouse, else target)"),
+        MarkPing = ns.T("Skull and ping Attack on your target"),
+        Pull = ns.T("Pull countdown"),
     }
     for _, ping in ipairs(DTT.PING_TYPES) do
-        names["Ping" .. ping.name] = "Ping " .. ping.label .. " on your target"
+        names["Ping" .. ping.name] = ns.T("Ping %s on your target"):format(ping.label)
     end
     for name, text in pairs(names) do
         _G["BINDING_NAME_CLICK " .. PREFIX .. name .. ":LeftButton"] = text
@@ -353,28 +354,29 @@ function DTT.InitializeButtons()
     BindingNames()
     bar = CreateFrame("Frame", PREFIX .. "TankBar", UIParent)
     ns.toolkit.CreateWidget({
-        addon = DTT.ADDON, key = "tankBar", title = "Tank buttons", frame = bar, store = DTT.db.bar,
+        addon = DTT.ADDON, key = "tankBar", title = ns.T("Tank buttons"), frame = bar, store = DTT.db.bar,
         width = BUTTON_SIZE + PADDING * 2, height = BUTTON_SIZE + PADDING * 2, point = BAR_POINT,
-        sizes = {scale = true}, mouse = "always", hint = "Tank buttons",
+        sizes = {scale = true}, mouse = "always", hint = ns.T("Tank buttons"),
         onUnlock = function() DTT.UpdateBarShown() end,
     })
 
-    buttons.skull = SecureButton("Skull", "Skull", "Puts the skull on your target, also in combat.", nil)
+    buttons.skull = SecureButton("Skull", ns.T("Skull"),
+        ns.T("Puts the skull on your target, also in combat."), nil)
     buttons.skull.icon:SetTexture(MARKER_ICON .. SKULL)
     -- Key binding only: a click on the bar has no mob under the mouse.
-    buttons.mouseover = SecureButton("SkullMouseover", "Skull (mouse)",
-        "Puts the skull on the mob under your mouse.", nil)
+    buttons.mouseover = SecureButton("SkullMouseover", ns.T("Skull (mouse)"),
+        ns.T("Puts the skull on the mob under your mouse."), nil)
     buttons.next = CreateNextButton()
-    buttons.markPing = SecureButton("MarkPing", "Skull and ping",
-        "Puts the skull on your target and pings Attack on it, in one press.", nil)
+    buttons.markPing = SecureButton("MarkPing", ns.T("Skull and ping"),
+        ns.T("Puts the skull on your target and pings Attack on it, in one press."), nil)
     buttons.markPing.icon:SetTexture(MARKER_ICON .. SKULL)
     buttons.markPing.label:SetText("!")
     buttons[#buttons + 1] = buttons.skull
     buttons[#buttons + 1] = buttons.next
     buttons[#buttons + 1] = buttons.markPing
     for _, ping in ipairs(DTT.PING_TYPES) do
-        local button = SecureButton("Ping" .. ping.name, "Ping " .. ping.label,
-            "Pings " .. ping.label .. " on your target.", nil)
+        local button = SecureButton("Ping" .. ping.name, ns.T("Ping %s"):format(ping.label),
+            ns.T("Pings %s on your target."):format(ping.label), nil)
         button.label:SetText(ping.short)
         buttons["ping" .. ping.key] = button
         buttons[#buttons + 1] = button

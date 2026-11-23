@@ -1,8 +1,9 @@
 # WoW Forever 术士助手（zhCN 汉化增强版）
 
 魔兽世界：无限（WoW Forever）可用的术士工具插件汉化增强包。基于 Dyre 的
-[WarlockToolsForever](https://github.com/jbedworth/WarlockToolsForever) v1.12.2，
-界面与通报已汉化，并增强了灵魂石与治疗石的使用体验。
+[WarlockToolsForever](https://github.com/jbedworth/WarlockToolsForever) v1.12.2、
+DyresDebuffTracker v1.5.0 与 DyresToolkit v2.12.0，界面与通报已汉化，
+并增强了灵魂石/治疗石体验与 Debuff 追踪。
 
 非官方汉化版，与原作者无隶属关系；原版功能与代码版权归 Dyre（John Bedworth），
 MIT 许可，各插件目录内附原始 LICENSE。
@@ -12,16 +13,16 @@ MIT 许可，各插件目录内附原始 LICENSE。
 持续伤害追踪（含姓名板圆点、伤害预测、智能诅咒）与控制条（宏、恐惧/放逐通报）
 已由上游移到 **Dyre's Debuff Tracker**。本包里的 WTF 设置页会保留原来的
 “持续伤害追踪 / 持续伤害 / 控制”位置，点进去直接打开 DDT 的设置。
-因此 **DyresDebuffTracker 现在是必需依赖**。DDT 本身未汉化（按范围要求不改
-Dyre 插件），它的设置页保持英文。
+因此 **DyresDebuffTracker 现在是必需依赖**。本仓库里的 DDT 与 DyresToolkit
+已完整汉化，并加入了下面列出的增强。
 
 ## 包含内容
 
 | 文件夹 | 版本 | 说明 |
 | --- | --- | --- |
 | `WarlockToolsForever/` | 1.12.2-fork.1 | 汉化增强版：碎片管理（含右键裁剪）、石头按钮、团队通报 |
-| `DyresToolkit/` | 2.12.0 | **必需依赖**：配置档案、布局、小地图菜单、仇恨提示；未改动 |
-| `DyresDebuffTracker/` | 1.5.0 | **必需依赖**：持续伤害追踪、姓名板圆点、伤害预测、智能诅咒、控制条；未改动 |
+| `DyresToolkit/` | 2.12.0-fork.1 | **必需依赖**：汉化；追踪条悬停金色连线 |
+| `DyresDebuffTracker/` | 1.5.0-fork.1 | **必需依赖**：汉化；DoT/放逐快结束提醒（可选铃声） |
 | `DyresShieldsUp/` | 1.5.0 | 可选：护盾剩余量新月条；未改动 |
 | `DyresBuffReminders/` | 1.13.1 | 可选：职业增益提醒、冷却与触发提示；未改动 |
 
@@ -33,7 +34,7 @@ Dyre 插件），它的设置页保持英文。
 3. 进入游戏，或输入 `/reload`。插件列表里确认五个插件都已启用。
 
 `DyresToolkit` 与 `DyresDebuffTracker` 必须保留；另外两个 Dyre 插件只在你想要
-对应功能时装。Dyre 插件都保持独立文件夹，可以从 CurseForge 照常更新。
+对应功能时装。
 
 ## 与原版 WarlockToolsForever 的差异
 
@@ -60,19 +61,41 @@ Dyre 插件），它的设置页保持英文。
   改为离开副本后补删（上游 1.12 功能，已汉化）。
 - 1.12.2 上游功能全部保留。
 
+## DyresDebuffTracker / DyresToolkit 汉化
+
+- 与 WTF 同一套 `Locales.lua` → `DDT.T()` / `ns.T()` 查表方案，
+  `GetLocale() == "zhCN"` 时生效；缺词条回落英文。
+- DDT 199 条、Toolkit 323 条中文词条，0 缺失；设置页、追踪条、控制条、
+  姓名板文案、`/ddt` 命令提示均已覆盖。
+- 法术名保持客户端原文（`ClassData` 的 label），在显示时再翻译，
+  确保与 Forever 中文客户端的法术名一致。
+- 调试输出、引擎字符串、宏名保留英文。
+
+## DDT / Toolkit 增强
+
+- **悬停金色连线**（Toolkit）：鼠标停在追踪行上（锁定时可停在目标/焦点行的
+  DoT 图标上）时，金色光点从该行流向对应怪物的姓名板；没有姓名板时指向
+  目标/焦点框体。设置：持续伤害页“悬停金色连线”，默认开启。
+- **DoT 快结束提醒**（DDT）：最后 3 秒闪烁目标/焦点面板，可伴随
+  `RaidWarning.wav` 铃声。设置：持续伤害页“持续伤害快结束时闪烁面板”
+  “持续伤害提醒时响铃”，默认开启。
+- **放逐快结束提醒**（DDT）：Banish 最后 3 秒闪烁控制条，铃声同上。
+  设置：控制页“放逐快结束时闪烁控制条”，默认开启。
+- 两项提醒按你的施法时间与技能等级时长推算（Forever 战斗中禁止插件读取
+  敌方光环）；被驱散、抵抗或提前解除时可能提前或延后。
+
 以前的 fork 增强里，属于持续伤害追踪与控制条的部分（DoT/放逐快结束提示、
 追踪条“目标/焦点”标签、点名字选怪、悬停金线、追踪条本地化）已随功能一起
-移到 Dyre's Debuff Tracker；DDT 未汉化、也没有这些提醒，按范围要求没有移植。
+移到 DyresDebuffTracker，并在本仓库的 DDT 中汉化、补回提醒与金线。
 
 ## 更新与兼容
 
 - 客户端：Forever（Interface 16001），简体中文客户端。
-- `## Version` 保持与上游一致的 `1.12.2`，只用 `X-WTF-Fork` 标记本版本，
-  避免被当成新版本反复覆盖。
-- **不要用 CurseForge 更新 `WarlockToolsForever`**，会覆盖回英文原版。
+- `## Version` 保持与上游一致，只用 `X-WTF-Fork` / `X-DDT-Fork` /
+  `X-DTK-Fork` 标记本版本，避免被当成新版本反复覆盖。
+- **不要用 CurseForge 更新这三个插件**，会覆盖回英文原版。
   上游发新版时，以新上游为准重新合并汉化。
-- `DyresToolkit`、`DyresDebuffTracker`、`DyresShieldsUp`、`DyresBuffReminders`
-  未改动，可以照常通过 CurseForge 更新。
+- `DyresShieldsUp`、`DyresBuffReminders` 未改动，可以照常通过 CurseForge 更新。
 - SavedVariables 不受覆盖影响，配置不会丢失；1.11.0 起旧的追踪/控制设置
   由 DDT 一次性读取，WTF 只原样保留、不修改。
 

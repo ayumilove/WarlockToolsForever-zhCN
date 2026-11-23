@@ -741,7 +741,7 @@ function DyresToolkit.RegisterProcs(spec)
         local sounds = Store().sounds
         local choice = type(sounds) == "table" and type(sounds[proc.key]) == "string" and sounds[proc.key]
             or proc.sound or DyresToolkit.DEFAULT_PROC_SOUND
-        local speech = LocalName(proc.usable) or proc.label
+        local speech = LocalName(proc.usable) or ns.T(proc.label)
         state.playedAt[proc.key] = now
         library.Play(choice, speech, "Master")
     end
@@ -1017,7 +1017,7 @@ function DyresToolkit.RegisterProcs(spec)
     state.widget = DyresToolkit.CreateWidget({
         addon = spec.addon,
         key = WIDGET_KEY,
-        title = type(spec.title) == "string" and spec.title or WIDGET_TITLE,
+        title = type(spec.title) == "string" and spec.title or ns.T(WIDGET_TITLE),
         frame = state.frame,
         store = spec.store(),
         width = WIDGET_WIDTH,
@@ -1149,7 +1149,7 @@ function DyresToolkit.AddProcSettings(category, layout, handle, opts)
     local rows = {}
     if type(layout) == "table" and type(layout.AddInitializer) == "function"
             and type(CreateSettingsListSectionHeaderInitializer) == "function" then
-        local header = CreateSettingsListSectionHeaderInitializer(opts.header or "Procs")
+        local header = CreateSettingsListSectionHeaderInitializer(ns.T(opts.header or "Procs"))
         ShownIf(header, AnyKnown)
         layout:AddInitializer(header)
         rows.header = header
@@ -1174,7 +1174,7 @@ function DyresToolkit.AddProcSettings(category, layout, handle, opts)
                 end
             end
         end
-        return " Shown by " .. tostring(title) .. " now, so this setting does nothing here."
+        return ns.T(" Shown by %s now, so this setting does nothing here."):format(tostring(title))
     end
     local function Greyed(initializer, proc)
         if type(initializer) == "table" and type(initializer.AddModifyPredicate) == "function" then
@@ -1209,7 +1209,7 @@ function DyresToolkit.AddProcSettings(category, layout, handle, opts)
         return Greyed(row, proc)
     end
     for _, proc in ipairs(list) do
-        local extra = type(proc.tooltip) == "string" and proc.tooltip ~= "" and (" " .. proc.tooltip) or ""
+        local extra = type(proc.tooltip) == "string" and proc.tooltip ~= "" and (" " .. ns.T(proc.tooltip)) or ""
         local usable = IsUsableProc(proc)
         -- An aura proc's sound is an aura sound (a file); a usable proc's is
         -- played by the engine, so any sound (2.12.0).
@@ -1222,26 +1222,30 @@ function DyresToolkit.AddProcSettings(category, layout, handle, opts)
         local silent = usable and not (type(handle.UsableSounds) == "function" and handle.UsableSounds())
         if silent then
             -- A usable proc without usableSounds: the arc switch only.
-            rows[proc.key] = {arc = Flag(proc, "arc", proc.label .. " arc",
-                "An arc each side of you, in its own color, while " .. proc.label .. " can be used. It is "
-                    .. "dimmed while you are short of rage or other power, also in combat." .. extra)}
+            rows[proc.key] = {arc = Flag(proc, "arc", ns.T("%s arc"):format(ns.T(proc.label)),
+                ns.T("An arc each side of you, in its own color, while %s can be used. It is "
+                    .. "dimmed while you are short of rage or other power, also in combat.")
+                    :format(ns.T(proc.label)) .. extra)}
         elseif usable then
-            arc = Flag(proc, "arc", proc.label .. " arc",
-                "An arc each side of you, in its own color, while " .. proc.label .. " can be used. It is "
-                    .. "dimmed while you are short of rage or other power, also in combat." .. extra)
-            sound = Flag(proc, "sound", proc.label .. " sound",
-                "Play a sound the moment " .. proc.label .. " can be used, also in combat; at most once every "
-                    .. USABLE_SOUND_GAP .. " seconds." .. extra)
+            arc = Flag(proc, "arc", ns.T("%s arc"):format(ns.T(proc.label)),
+                ns.T("An arc each side of you, in its own color, while %s can be used. It is "
+                    .. "dimmed while you are short of rage or other power, also in combat.")
+                    :format(ns.T(proc.label)) .. extra)
+            sound = Flag(proc, "sound", ns.T("%s sound"):format(ns.T(proc.label)),
+                ns.T("Play a sound the moment %s can be used, also in combat; at most once every "
+                    .. "%d seconds."):format(ns.T(proc.label), USABLE_SOUND_GAP) .. extra)
         else
-            arc = Flag(proc, "arc", proc.label .. " arc",
-                "An arc each side of you, in its own color, while " .. proc.label .. " is up. It drains with the "
-                    .. "time left and goes the moment you use it, also in combat." .. extra)
-            sound = Flag(proc, "sound", proc.label .. " sound",
-                "Play a sound the moment " .. proc.label .. " procs, also in combat." .. extra)
+            arc = Flag(proc, "arc", ns.T("%s arc"):format(ns.T(proc.label)),
+                ns.T("An arc each side of you, in its own color, while %s is up. It drains with the "
+                    .. "time left and goes the moment you use it, also in combat.")
+                    :format(ns.T(proc.label)) .. extra)
+            sound = Flag(proc, "sound", ns.T("%s sound"):format(ns.T(proc.label)),
+                ns.T("Play a sound the moment %s procs, also in combat.")
+                    :format(ns.T(proc.label)) .. extra)
         end
         if not silent then
         local choice = Settings.RegisterProxySetting(category, Variable(proc, "sound_choice"),
-            Settings.VarType.String or "string", "Sound", proc.sound or DyresToolkit.DEFAULT_PROC_SOUND,
+            Settings.VarType.String or "string", ns.T("Sound"), proc.sound or DyresToolkit.DEFAULT_PROC_SOUND,
             function()
                 local sounds = Store().sounds
                 return type(sounds) == "table" and sounds[proc.key] or proc.sound
@@ -1257,9 +1261,13 @@ function DyresToolkit.AddProcSettings(category, layout, handle, opts)
                 handle.Apply()
                 handle.Preview(proc.key)
             end)
+        local soundTooltip = usable
+            and ns.T("The sound when %s can be used. Choosing one plays it once. The sounds come from "
+                .. "Dyre's Sounds."):format(ns.T(proc.label))
+            or ns.T("The sound when %s procs. Choosing one plays it once. The sounds come from "
+                .. "Dyre's Sounds."):format(ns.T(proc.label))
         local dropdown = Greyed(ShownIf(Settings.CreateDropdown(category, choice, Choices,
-            "The sound when " .. proc.label .. (usable and " can be used" or " procs")
-                .. ". Choosing one plays it once. The sounds come from Dyre's Sounds." .. extra),
+            soundTooltip .. extra),
             function() return handle.Known(proc.key) end), proc)
         local library = SoundLibrary()
         if library then
@@ -1277,10 +1285,10 @@ function DyresToolkit.AddProcSettings(category, layout, handle, opts)
     local widget = handle.Widget()
     if widget and AnyKnown() then
         DyresToolkit.AddWidgetSettings(category, layout, widget, {
-            labels = {scale = "Proc arc size"},
-            tooltips = {scale = "How big the proc arcs are, in percent. They grow and shrink from their center, "
-                .. "and the gap between them grows with them."},
-            resetTooltip = "The proc arcs back to 100%.",
+            labels = {scale = ns.T("Proc arc size")},
+            tooltips = {scale = ns.T("How big the proc arcs are, in percent. They grow and shrink from their "
+                .. "center, and the gap between them grows with them.")},
+            resetTooltip = ns.T("The proc arcs back to 100%."),
         })
     end
     return rows

@@ -267,7 +267,7 @@ function DyresToolkit.CreateControlTracker(spec)
         if remaining <= 0 then
             return nil
         end
-        return "  |cff999999" .. math.ceil(remaining) .. " s|r"
+        return ns.T("  |cff999999%d s|r"):format(math.ceil(remaining))
     end
 
     -- A fixedClick slot shows while you have a live hostile focus (its state
@@ -289,7 +289,8 @@ function DyresToolkit.CreateControlTracker(spec)
         local focusGUID = focusBox and DyresToolkit.FocusWorks() and DyresToolkit.MobKey("focus")
         if focusBox then
             local name = DyresToolkit.ReadName("focus")
-            focusBox.display.name:SetText(sample and not name and "Focus (sample)" or ("Focus: " .. (name or "")))
+            focusBox.display.name:SetText(sample and not name and ns.T("Focus (sample)")
+                or ns.T("Focus: %s"):format(name or ""))
         end
         for index, row in ipairs(tracker.rows) do
             local holder = row.holder
@@ -305,7 +306,7 @@ function DyresToolkit.CreateControlTracker(spec)
                 row.name:SetText(row.mobName .. (spec.countdown and TimeText(row) or ""))
                 row:Show()
             elseif spent then
-                row.name:SetText(idle and (DyresToolkit.ReadName("focus") or "Focus") or holder.mobName)
+                row.name:SetText(idle and (DyresToolkit.ReadName("focus") or ns.T("Focus")) or holder.mobName)
                 row:Show()
             elseif sample and spec.samples and spec.samples[index] then
                 row.name:SetText(spec.samples[index])
@@ -620,7 +621,7 @@ function DyresToolkit.CreateControlTracker(spec)
         frame.placeholder:SetPoint("LEFT", frame.line, "LEFT", 1, 0)
         if look.label then
             frame.label = frame:CreateFontString(nil, "BORDER", "GameFontDisableSmall")
-            frame.label:SetText(DyresToolkit.SpellName(first) or def.label)
+            frame.label:SetText(DyresToolkit.SpellName(first) or ns.T(def.label))
         end
         ApplyLook(frame, look)
     end
@@ -652,11 +653,11 @@ function DyresToolkit.CreateControlTracker(spec)
         end
         GameTooltip:SetOwner(holder, "ANCHOR_TOP")
         if holder.spellName then
-            GameTooltip:SetText("Click: " .. holder.spellName .. " your focus again.", 1, 1, 1)
-            GameTooltip:AddLine("No marker and no target change. With no focus it does nothing.", 0.7, 0.7, 0.7,
-                true)
+            GameTooltip:SetText(ns.T("Click: %s your focus again."):format(holder.spellName), 1, 1, 1)
+            GameTooltip:AddLine(ns.T("No marker and no target change. With no focus it does nothing."), 0.7, 0.7,
+                0.7, true)
         else
-            GameTooltip:SetText("Your crowd control shows here with its time left.", 0.7, 0.7, 0.7)
+            GameTooltip:SetText(ns.T("Your crowd control shows here with its time left."), 0.7, 0.7, 0.7)
         end
         GameTooltip:Show()
     end
@@ -711,10 +712,10 @@ function DyresToolkit.CreateControlTracker(spec)
         Draggable(box)
         local def = tracker.focusDef
         box:SetScript("OnEnter", function(self)
-            local spell = DyresToolkit.SpellName(def.ids[1]) or def.label
+            local spell = DyresToolkit.SpellName(def.ids[1]) or ns.T(def.label)
             GameTooltip:SetOwner(self, "ANCHOR_TOP")
-            GameTooltip:SetText("Click: " .. spell .. " your focus again.", 1, 1, 1)
-            GameTooltip:AddLine("Only your focus; with no focus it does nothing.", 0.7, 0.7, 0.7, true)
+            GameTooltip:SetText(ns.T("Click: %s your focus again."):format(spell), 1, 1, 1)
+            GameTooltip:AddLine(ns.T("Only your focus; with no focus it does nothing."), 0.7, 0.7, 0.7, true)
             GameTooltip:Show()
         end)
         box:SetScript("OnLeave", function() GameTooltip:Hide() end)

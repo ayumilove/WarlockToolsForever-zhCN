@@ -131,7 +131,7 @@ function DyresToolkit.CreateMacroKeeper(spec)
             if DyresToolkit.CharacterMacroLimit() - numCharacter <= MACRO_SLOT_CUSHION then
                 if not self.warned and spec.warn then
                     self.warned = true
-                    spec.warn("No free character macro slot for \"" .. name .. "\"; free one and it is added.")
+                    spec.warn(ns.T("No free character macro slot for \"%s\"; free one and it is added."):format(name))
                 end
                 return nil, "full"
             end

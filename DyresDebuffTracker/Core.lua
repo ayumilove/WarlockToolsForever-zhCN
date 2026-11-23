@@ -14,7 +14,7 @@ local addonName, DDT = ...
 
 DDT.TITLE = "Dyre's Debuff Tracker"
 DDT.PREFIX = "DDT: "
-DDT.TOOLKIT_MISSING = "Dyre's Debuff Tracker needs Dyre's Toolkit 2.9.1 or later. Install or update it from CurseForge."
+DDT.TOOLKIT_MISSING = DDT.T("Dyre's Debuff Tracker needs Dyre's Toolkit 2.9.1 or later. Install or update it from CurseForge.")
 -- Toolkit 2.9.1 holds every class's DoT and crowd-control table and the
 -- prediction engine's finishers and late starts; its contract is still 2, so
 -- the TOC version is read too. An unreadable version is let through.
@@ -102,16 +102,17 @@ DDT.FILLS = {"stripes", "solid", "bar"}
 -- Where DIES goes (John, 2026-11-09), apart for the target and focus frames
 -- and for nameplates: Auto is the Toolkit's choice; X and Y move it, in
 -- pixels, right and up positive.
-DDT.DIES_PLACES = {{"auto", "Auto"}, {"left", "Left of the bar"}, {"right", "Right of the bar"},
-    {"center", "Center of the bar"}, {"above", "Above the bar"}, {"below", "Below the bar"},
-    {"inside", "Inside the bar's right end"}}
+DDT.DIES_PLACES = {{"auto", DDT.T("Auto")}, {"left", DDT.T("Left of the bar")},
+    {"right", DDT.T("Right of the bar")}, {"center", DDT.T("Center of the bar")},
+    {"above", DDT.T("Above the bar")}, {"below", DDT.T("Below the bar")},
+    {"inside", DDT.T("Inside the bar's right end")}}
 DDT.DIES_OFFSET = 100
 DDT.PREDICT_COLORS = {
-    {key = "purple", label = "Purple", color = {0.64, 0.21, 0.93}},
-    {key = "red", label = "Red", color = {1, 0.15, 0.15}},
-    {key = "orange", label = "Orange", color = {1, 0.55, 0.1}},
-    {key = "white", label = "White", color = {1, 1, 1}},
-    {key = "green", label = "Green", color = {0.25, 0.9, 0.3}},
+    {key = "purple", label = DDT.T("Purple"), color = {0.64, 0.21, 0.93}},
+    {key = "red", label = DDT.T("Red"), color = {1, 0.15, 0.15}},
+    {key = "orange", label = DDT.T("Orange"), color = {1, 0.55, 0.1}},
+    {key = "white", label = DDT.T("White"), color = {1, 1, 1}},
+    {key = "green", label = DDT.T("Green"), color = {0.25, 0.9, 0.3}},
 }
 DDT.PANELS = {"target", "focus", "list"}
 -- Each DoT panel's grow direction (John, 2026-11-14: "for each frame
@@ -127,9 +128,10 @@ DDT.CONTROL_SCALE = {min = 50, max = 150, step = 5, default = 100}
 -- look (200 wide, a 16 px bar, the name line at 100%), so nothing changes
 -- until you move a slider.
 DDT.CONTROL_LOOK = {
-    {key = "width", label = "Bar width", min = 120, max = 400, step = 10, default = 200},
-    {key = "barHeight", label = "Bar height", min = 10, max = 40, step = 1, default = 16},
-    {key = "textScale", label = "Text size", min = 50, max = 200, step = 5, default = 100, percent = true},
+    {key = "width", label = DDT.T("Bar width"), min = 120, max = 400, step = 10, default = 200},
+    {key = "barHeight", label = DDT.T("Bar height"), min = 10, max = 40, step = 1, default = 16},
+    {key = "textScale", label = DDT.T("Text size"), min = 50, max = 200, step = 5, default = 100,
+        percent = true},
 }
 DDT.CONTROL_OPACITY = {min = 10, max = 100, step = 5, default = 100}
 
@@ -272,10 +274,11 @@ end
 -- The default group message for a crowd-control spell: its name, the mob,
 -- and the marker, with the AddOn's credit.
 function DDT.DefaultAnnounceText(spell)
+    local announce = DDT.L.announce
     if spell.untargeted then
-        return spell.label .. "! - via Dyre's Debuff Tracker"
+        return announce.untargeted:format(spell.label)
     end
-    return spell.label .. " on >> %T <<" .. (spell.marker and " %M" or "") .. " - via Dyre's Debuff Tracker"
+    return announce.targeted:format(spell.label, spell.marker and " %M" or "")
 end
 
 local function SanitizeSizes(theme, saved)
@@ -354,6 +357,10 @@ function DDT.SanitizeDB(db, classData)
         colors = {}, panelColors = {},
         curseMode = Choice(dots.curseMode, DDT.CURSE_MODES, "last"),
         curseMarker = dots.curseMarker ~= false,
+        -- Fork 1.5.0-fork.1: a warning shortly before a DoT runs out, and the
+        -- tracker's hover line (Toolkit 2.12.0-fork.1).
+        dotWarn = Bool(dots.dotWarn, true), warnSound = Bool(dots.warnSound, true),
+        hoverLine = Bool(dots.hoverLine, true),
     }
     if clean.trackerSize ~= false then
         DDT.ApplyTrackerSize(clean)
@@ -413,7 +420,9 @@ function DDT.SanitizeDB(db, classData)
     local cleanControl = {enabled = Bool(control.enabled, true), plateTimers = Bool(control.plateTimers, true),
         macros = Bool(control.macros, true), say = Bool(control.say, false), position = Place(control.position),
         scale = Whole(control.scale, DDT.CONTROL_SCALE.min, DDT.CONTROL_SCALE.max, DDT.CONTROL_SCALE.default),
-        markers = {}, announce = {}, texts = {}, opacity = Stepped(control.opacity, DDT.CONTROL_OPACITY)}
+        markers = {}, announce = {}, texts = {}, opacity = Stepped(control.opacity, DDT.CONTROL_OPACITY),
+        -- Fork 1.5.0-fork.1: a warning shortly before Banish ends.
+        banishWarn = Bool(control.banishWarn, true)}
     for _, spec in ipairs(DDT.CONTROL_LOOK) do
         cleanControl[spec.key] = Stepped(control[spec.key], spec)
     end
@@ -462,7 +471,7 @@ end
 -- them (never deleted). Their per-character saved variables are read once
 -- and never written.
 -- What came over, said once in chat.
-DDT.TOOLS_IMPORTED = "Copied your %s settings from %s. Change them here, under Dyre's Debuff Tracker."
+DDT.TOOLS_IMPORTED = DDT.T("Copied your %s settings from %s. Change them here, under Dyre's Debuff Tracker.")
 -- WTF's default group texts end with its credit; DDT's say "via Dyre's Debuff Tracker".
 local WTF_CREDIT = " - via Warlock Tools Forever (WTF)"
 local DDT_CREDIT = " - via Dyre's Debuff Tracker"
@@ -475,11 +484,11 @@ DDT.WTF_KEYS = {
     tracker = {"enabled", "theme", "sizes", "order", "health", "healthText", "position", "sections",
         "panelOpacity", "onPlates", "plateDots", "plateDotsOffset", "plateDotsOpacity", "outlineWidth",
         "hideEmpty", "show", "colors", "panelColors", "curseMode", "curseMarker", "lastCurse", "lastBane",
-        "lastControl"},
+        "lastControl", "dotWarn", "warnSound"},
     predict = {"enabled", "plates", "dies", "fill", "color", "opacity", "outline", "diesPlace", "diesX", "diesY",
         "plateDiesPlace", "plateDiesX", "plateDiesY"},
     -- The bar's own settings; WTF had them only while its bar was on.
-    control = {"enabled", "position", "scale", "plateTimers"},
+    control = {"enabled", "position", "scale", "plateTimers", "banishWarn"},
     -- The macros and their markers: WTF kept the Warlock's macros whether its
     -- bar was on or off (the Toolkit's macros owner), so these always come.
     macros = {"macros", "markers"},
@@ -614,9 +623,9 @@ end
 -- no longer claims (the handover), and what moved.
 DDT.TOOLS_IMPORT = {
     WARLOCK = {addon = "WarlockToolsForever", title = "Warlock Tools Forever", saved = "WarlockToolsForeverDB",
-        handover = "1.11.0", what = "DoT tracker, damage prediction, and crowd-control", copy = ImportWTF},
+        handover = "1.11.0", what = DDT.T("DoT tracker, damage prediction, and crowd-control"), copy = ImportWTF},
     MAGE = {addon = "MageToolsForever", title = "Mage Tools Forever", saved = "MageToolsForeverDB",
-        handover = "1.6.0", what = "Polymorph bar", copy = ImportMTF},
+        handover = "1.6.0", what = DDT.T("Polymorph bar"), copy = ImportMTF},
 }
 
 local function AddOnVersion(addon)
@@ -688,8 +697,8 @@ function DDT.MoveCurseBinding()
     if type(SaveBindings) == "function" and type(GetCurrentBindingSet) == "function" then
         SaveBindings(GetCurrentBindingSet())
     end
-    DDT.Report("Your Smart curse key (" .. table.concat(keys, ", ") .. ") now casts Dyre's Debuff Tracker's "
-        .. "smart curse.")
+    DDT.Report(DDT.T("Your Smart curse key (%s) now casts Dyre's Debuff Tracker's smart curse.")
+        :format(table.concat(keys, ", ")))
     return true
 end
 
@@ -703,9 +712,9 @@ end
 
 -- Startup and commands -------------------------------------------------------
 
-local HELP = "/ddt opens the settings; /ddt reset puts the frames back; /ddt reset_focus checks the focus again; "
+local HELP = DDT.T("/ddt opens the settings; /ddt reset puts the frames back; /ddt reset_focus checks the focus again; "
     .. "/ddt debug shows what the trackers see; /ddt preview brand shows the Demonic Brand pentagram on your "
-    .. "target (Warlocks, WoW: Forever)."
+    .. "target (Warlocks, WoW: Forever).")
 
 local function HandleCommand(message)
     local command, argument = (message or ""):lower():match("^%s*(%S*)%s*(%S*)")
@@ -717,8 +726,8 @@ local function HandleCommand(message)
         DDT.ResetPositions()
     elseif command == "reset_focus" then
         DDT.toolkit.ResetFocusWorks()
-        DDT.Report("Focus check reset for every Dyre's AddOn. The macros try your focus, then the mob under the "
-            .. "mouse, then your target, until a focus is seen to work.")
+        DDT.Report(DDT.T("Focus check reset for every Dyre's AddOn. The macros try your focus, then the mob under the "
+            .. "mouse, then your target, until a focus is seen to work."))
     elseif command == "debug" then
         for _, line in ipairs(DDT.DebugLines()) do
             DDT.Report(line)

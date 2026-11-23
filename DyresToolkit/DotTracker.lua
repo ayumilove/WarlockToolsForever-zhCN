@@ -79,6 +79,15 @@ local PADDING = 6
 -- it stays until combat ends (WTF player feedback).
 local UNSEEN_SECONDS = 10
 local MAX_NAMEPLATE_UNITS = 40
+-- The hover line (2.12.0-fork.1): while the mouse is on a row (or one of its
+-- cast buttons), gold sparks flow from the row to the mob's nameplate (else
+-- its target or focus frame), so you see which mob the row is about.
+local LINE_COLOR = {1, 0.84, 0.35}
+local LINE_SPARKS = 12
+local LINE_SPARK_SIZE = 3
+local LINE_TICK = 0.1
+local LINE_INSET = 0.08
+local LINE_SPEED = 0.5
 -- How long a cast with two or more mobs of its name waits for an aura on one
 -- of them (the aura confirm, at OnCastSucceeded): DotPredict's
 -- PROJECTILE_TRAVEL. John's probe saw the aura 0.3-0.9 s after success.
@@ -87,8 +96,8 @@ local AURA_FILTER = "HARMFUL|PLAYER"
 local BROWN = {0.28, 0.16, 0.07, 0.85}
 local PLACEHOLDER_ALPHA = 0.3
 local DEFAULT_POINT = {"CENTER", "CENTER", -260, 120}
-local SAMPLE_NAMES = {target = "Target (sample)", focus = "Focus (sample)",
-    list = {"Another mob (sample)", "One more mob (sample)"}}
+local SAMPLE_NAMES = {target = ns.T("Target (sample)"), focus = ns.T("Focus (sample)"),
+    list = {ns.T("Another mob (sample)"), ns.T("One more mob (sample)")}}
 local PINNED = {
     target = {unit = "target", driver = "[@target,harm,nodead] show; hide"},
     focus = {unit = "focus", driver = "[@focus,exists,harm,nodead] show; hide"},
@@ -788,9 +797,14 @@ function DyresToolkit.CreateDotTracker(spec)
         end
     end
 
+    -- The hover line's two ends (set after FindUnit, below).
+    local StartHover, StopHover
+
     local function CreateRow(parent, unit)
         local row = CreateFrame("Frame", nil, parent, "BackdropTemplate")
         row.panelKey = unit or "list"
+        row:SetScript("OnEnter", function(self) StartHover(self) end)
+        row:SetScript("OnLeave", function(self) StopHover(self) end)
         row:SetSize(RowWidth(), RowHeight())
         row:SetBackdrop({bgFile = "Interface\\Tooltips\\UI-Tooltip-Background",
             edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border", edgeSize = 10,
@@ -822,7 +836,7 @@ function DyresToolkit.CreateDotTracker(spec)
                 placeholder:SetPoint("LEFT", line, "LEFT", 1, 0)
                 local label = ScaleFont(regions:CreateFontString(nil, "BORDER", "GameFontDisableSmall"))
                 label:SetPoint("LEFT", line, "LEFT", BarIcon() + 8, 0)
-                label:SetText(slot.label)
+                label:SetText(ns.T(slot.label))
             end
         end
         local container = DyresToolkit.CreateAuraContainer(row)
@@ -960,19 +974,20 @@ function DyresToolkit.CreateDotTracker(spec)
         GameTooltip:SetOwner(button, "ANCHOR_TOP")
         local names = button.smart
         if names then
-            GameTooltip:SetText("Smart curse on your " .. button.unit .. ".", 1, 1, 1)
-            GameTooltip:AddLine("Click: " .. button.spellName .. " (picked out of combat)", 1, 1, 1)
-            GameTooltip:AddLine("Ctrl-click: " .. (names.tongues or names.weakness), 1, 1, 1)
-            GameTooltip:AddLine("Shift-click: " .. names.weakness, 1, 1, 1)
+            GameTooltip:SetText(ns.T("Smart curse on your %s."):format(ns.T(button.unit)), 1, 1, 1)
+            GameTooltip:AddLine(ns.T("Click: %s (picked out of combat)"):format(button.spellName), 1, 1, 1)
+            GameTooltip:AddLine(ns.T("Ctrl-click: %s"):format(names.tongues or names.weakness), 1, 1, 1)
+            GameTooltip:AddLine(ns.T("Shift-click: %s"):format(names.weakness), 1, 1, 1)
             if names.recklessness then
-                GameTooltip:AddLine("Alt-click: " .. names.recklessness, 1, 1, 1)
+                GameTooltip:AddLine(ns.T("Alt-click: %s"):format(names.recklessness), 1, 1, 1)
             end
-            GameTooltip:AddLine("The letter shows the best curse for this mob: T Tongues for a caster, "
-                .. "else E Elements or W Weakness.", 0.7, 0.7, 0.7, true)
+            GameTooltip:AddLine(ns.T("The letter shows the best curse for this mob: T Tongues for a caster, "
+                .. "else E Elements or W Weakness."), 0.7, 0.7, 0.7, true)
         elseif button.spellName then
-            GameTooltip:SetText("Click: cast " .. button.spellName .. " on your " .. button.unit .. ".", 1, 1, 1)
+            GameTooltip:SetText(ns.T("Click: cast %s on your %s."):format(button.spellName, ns.T(button.unit)),
+                1, 1, 1)
         else
-            GameTooltip:SetText("You know no spell for this slot yet; it recasts the last one you used.",
+            GameTooltip:SetText(ns.T("You know no spell for this slot yet; it recasts the last one you used."),
                 0.7, 0.7, 0.7)
         end
         GameTooltip:Show()
@@ -1060,8 +1075,14 @@ function DyresToolkit.CreateDotTracker(spec)
                 mark:SetTextColor(1, 0.82, 0)
                 button.mark = mark
             end
-            button:SetScript("OnEnter", ShowCastTooltip)
-            button:SetScript("OnLeave", function() GameTooltip:Hide() end)
+            button:SetScript("OnEnter", function(self)
+                ShowCastTooltip(self)
+                StartHover(self:GetParent())
+            end)
+            button:SetScript("OnLeave", function(self)
+                GameTooltip:Hide()
+                StopHover(self:GetParent())
+            end)
             row.casts[slotIndex] = button
         end
         row:EnableMouse(true)
@@ -1119,6 +1140,158 @@ function DyresToolkit.CreateDotTracker(spec)
 
     local function FindUnit(guid)
         return DyresToolkit.FindUnit(guid, spec.find or DEFAULT_FIND)
+    end
+
+    -- The hover line (2.12.0-fork.1) ---------------------------------------------
+
+    local line, lineTicker, lineWait
+
+    -- The owner's switch (store.hoverLine; only false turns it off).
+    local function HoverLineOn()
+        return store.hoverLine ~= false
+    end
+
+    -- A frame's center in UIParent units, whatever the frame's own scale.
+    local function UIPos(frame)
+        local x, y = frame:GetCenter()
+        if type(x) ~= "number" or type(y) ~= "number" then
+            return nil
+        end
+        local scale = frame:GetEffectiveScale() / UIParent:GetEffectiveScale()
+        return x * scale, y * scale
+    end
+
+    -- The mob a row is about: the pinned unit, else the list row's mob.
+    local function LineUnit(row)
+        if row.unit then
+            return row.unit
+        end
+        if row.guid then
+            return FindUnit(row.guid)
+        end
+    end
+
+    -- A nameplate first; on no plate, the target's or focus's own frame (the
+    -- pinned rows' units), so the line still points at the mob.
+    local function LineAnchor(unit)
+        if not unit or not UnitExists(unit) then
+            return nil
+        end
+        if type(C_NamePlate) == "table" and type(C_NamePlate.GetNamePlateForUnit) == "function" then
+            local plate = C_NamePlate.GetNamePlateForUnit(unit)
+            if plate and plate:IsVisible() then
+                return plate
+            end
+        end
+        local frame = unit == "target" and rawget(_G, "TargetFrame")
+            or unit == "focus" and rawget(_G, "FocusFrame")
+        if frame and frame:IsVisible() then
+            return frame
+        end
+    end
+
+    -- The row, or one of its cast buttons, under the mouse.
+    local function RowHovered(row)
+        if row:IsMouseOver() then
+            return true
+        end
+        for _, button in pairs(row.casts or {}) do
+            if button:IsMouseOver() then
+                return true
+            end
+        end
+        return false
+    end
+
+    local function HideLine()
+        tracker.hoverRow = nil
+        if line then
+            line:Hide()
+        end
+        if lineTicker then
+            lineTicker:SetScript("OnUpdate", nil)
+        end
+    end
+
+    local function UpdateLine()
+        local row = tracker.hoverRow
+        if not row or not HoverLineOn() or not row:IsShown() or not RowHovered(row) then
+            HideLine()
+            return
+        end
+        local unit = LineUnit(row)
+        local anchor = unit and LineAnchor(unit)
+        local fromX, fromY = UIPos(row)
+        local toX, toY = anchor and UIPos(anchor)
+        for _, spark in ipairs(line.sparks) do
+            spark:Hide()
+        end
+        if not fromX or not toX then
+            return
+        end
+        local dx, dy = toX - fromX, toY - fromY
+        local phase = (GetTime() * LINE_SPEED) % 1
+        local count = #line.sparks
+        for index = 1, count do
+            local spark = line.sparks[index]
+            local at = (index - 1) / count + phase
+            if at >= 1 then
+                at = at - 1
+            end
+            at = LINE_INSET + at * (1 - 2 * LINE_INSET)
+            spark:ClearAllPoints()
+            spark:SetPoint("BOTTOMLEFT", line, "BOTTOMLEFT", fromX + dx * at - LINE_SPARK_SIZE / 2,
+                fromY + dy * at - LINE_SPARK_SIZE / 2)
+            spark:Show()
+        end
+    end
+
+    local function LineTick(_, elapsed)
+        lineWait = (lineWait or 0) + elapsed
+        if lineWait < LINE_TICK then
+            return
+        end
+        lineWait = 0
+        UpdateLine()
+    end
+
+    local function LineFrame()
+        if not line then
+            line = CreateFrame("Frame", nil, UIParent)
+            line:SetAllPoints(UIParent)
+            line:SetFrameStrata("HIGH")
+            line:EnableMouse(false)
+            line:Hide()
+            line.sparks = {}
+            for index = 1, LINE_SPARKS do
+                local spark = line:CreateTexture(nil, "OVERLAY")
+                spark:SetTexture("Interface\\Buttons\\WHITE8X8")
+                spark:SetVertexColor(LINE_COLOR[1], LINE_COLOR[2], LINE_COLOR[3], 0.9)
+                spark:SetSize(LINE_SPARK_SIZE, LINE_SPARK_SIZE)
+                spark:Hide()
+                line.sparks[index] = spark
+            end
+            lineTicker = CreateFrame("Frame")
+        end
+        return line
+    end
+
+    StartHover = function(row)
+        if not row or not HoverLineOn() then
+            return
+        end
+        LineFrame():Show()
+        tracker.hoverRow = row
+        lineTicker:SetScript("OnUpdate", LineTick)
+        UpdateLine()
+    end
+
+    -- A child button's OnLeave may arrive first when the mouse moves within
+    -- the row; the ticker keeps the line up while any part still has it.
+    StopHover = function(row)
+        if tracker.hoverRow == row and not RowHovered(row) then
+            HideLine()
+        end
     end
 
     local function Bind(row, unit)

@@ -33,7 +33,7 @@ DDT.NAMES = {
 -- are on (Warlock Tools Forever's rule, moved here with its tracker).
 DDT.CURSE_MACRO = "! Curse"
 BINDING_HEADER_DYRESDEBUFFTRACKER = "Dyre's Debuff Tracker"
-_G["BINDING_NAME_CLICK " .. DDT.NAMES.smartCurse .. ":LeftButton"] = "Smart curse (Warlock)"
+_G["BINDING_NAME_CLICK " .. DDT.NAMES.smartCurse .. ":LeftButton"] = DDT.T("Smart curse (Warlock)")
 local CONTROL_ROWS = 5
 local CONTROL_WIDTH = 200
 -- The control bar's rows: name line 18, bar line 16, padding 6, gap 4.
@@ -152,7 +152,7 @@ function DDT.ApplyCurseMacro()
             end
         elseif body then
             if keeper:Write(DDT.CURSE_MACRO, body) == "adopted" then
-                DDT.Report("Dyre's Debuff Tracker keeps your \"" .. DDT.CURSE_MACRO .. "\" macro now.")
+                DDT.Report(DDT.T("Dyre's Debuff Tracker keeps your \"%s\" macro now."):format(DDT.CURSE_MACRO))
             end
         elseif keeper.written[DDT.CURSE_MACRO] then
             keeper:Delete(DDT.CURSE_MACRO)
@@ -189,7 +189,7 @@ local function CreateDots()
             end
         end})
     if not tracker then
-        DDT.Report("The DoT tracker stays off: this client lacks " .. tostring(missing) .. ".")
+        DDT.Report(DDT.T("The DoT tracker stays off: this client lacks %s."):format(tostring(missing)))
         return
     end
     DDT.dotTracker = tracker
@@ -276,7 +276,7 @@ local function CreateControl()
         sizes[spec.key] = {min = spec.min, max = spec.max, step = spec.step, default = spec.default,
             label = spec.label, percent = spec.percent}
     end
-    local widget = toolkit.CreateWidget({addon = addonName, key = "control", title = "Crowd control",
+    local widget = toolkit.CreateWidget({addon = addonName, key = "control", title = DDT.T("Crowd control"),
         store = db.control, width = CONTROL_WIDTH, height = rows * CONTROL_ROW_STEP - CONTROL_GAP,
         name = DDT.NAMES.control, point = CONTROL_POINT, sizes = sizes,
         sizeOrder = {"scale", "width", "barHeight", "textScale"},
@@ -308,12 +308,12 @@ local function CreateControl()
         },
         keeper = {owned = db.macrosOwned, warn = DDT.Report},
         onAdopt = function(name)
-            DDT.Report("Dyre's Debuff Tracker keeps your \"" .. name .. "\" macro now.")
+            DDT.Report(DDT.T("Dyre's Debuff Tracker keeps your \"%s\" macro now."):format(name))
         end,
         onDragStart = function() toolkit.BeginDrag(widget) end,
         onDragStop = function() toolkit.EndDrag(widget) end})
     if not tracker then
-        DDT.Report("The crowd-control bar stays off: this client lacks " .. tostring(missing) .. ".")
+        DDT.Report(DDT.T("The crowd-control bar stays off: this client lacks %s."):format(tostring(missing)))
         return
     end
     DDT.controlTracker = tracker
@@ -414,7 +414,7 @@ function DDT.Start()
             DDT.frostArcs = arcs
         else
             DDT.frostMissing = tostring(missing)
-            DDT.Report("The frozen and chilled arcs stay off: this client lacks " .. tostring(missing) .. ".")
+            DDT.Report(DDT.T("The frozen and chilled arcs stay off: this client lacks %s."):format(tostring(missing)))
         end
     end
     -- The Warlock's Demonic Brand pentagram, the same way. Only where the client
@@ -426,7 +426,8 @@ function DDT.Start()
         else
             DDT.brandMissing = tostring(missing)
             if DDT.BrandKnown() then
-                DDT.Report("The Demonic Brand pentagram stays off: this client lacks " .. tostring(missing) .. ".")
+                DDT.Report(DDT.T("The Demonic Brand pentagram stays off: this client lacks %s.")
+                    :format(tostring(missing)))
             end
         end
     end
@@ -443,6 +444,10 @@ function DDT.Start()
     end
     if #(DDT.classData.control or {}) > 0 then
         CreateControl()
+    end
+    -- Fork 1.5.0-fork.1: the DoT and Banish end warnings (Warnings.lua).
+    if type(DDT.InitializeWarnings) == "function" then
+        DDT.InitializeWarnings()
     end
 end
 
@@ -526,17 +531,18 @@ end
 -- The Demonic Brand preview on your target's nameplate, on or off (the
 -- "Preview" button and /ddt preview). No debuff needed.
 DDT.BRAND_PREVIEW_TEXT = {
-    started = "Demonic Brand preview: on your target's nameplate. Change Size and Height to see them. Press "
-        .. "Preview again, or change target, to end it.",
-    stopped = "Demonic Brand preview: off.",
-    ["no plate"] = "Demonic Brand preview: target a mob with its nameplate showing first.",
+    started = DDT.T("Demonic Brand preview: on your target's nameplate. Change Size and Height to see them. Press "
+        .. "Preview again, or change target, to end it."),
+    stopped = DDT.T("Demonic Brand preview: off."),
+    ["no plate"] = DDT.T("Demonic Brand preview: target a mob with its nameplate showing first."),
 }
 
 function DDT.PreviewBrand()
     if not DDT.brandArcs then
         DDT.Report(DDT.class == "WARLOCK"
-            and "Demonic Brand preview: this client has no Demonic Brand (" .. tostring(DDT.brandMissing) .. ")."
-            or "Demonic Brand preview: Warlocks only.")
+            and DDT.T("Demonic Brand preview: this client has no Demonic Brand (%s).")
+                :format(tostring(DDT.brandMissing))
+            or DDT.T("Demonic Brand preview: Warlocks only."))
         return nil
     end
     local result = DDT.brandArcs:TogglePreview()
@@ -609,7 +615,7 @@ function DDT.ResetPositions()
         DDT.dotTracker:ResetPosition()
     end
     DDT.toolkit.ResetWidgets(addonName)
-    DDT.Report("Frames are back in their default places.")
+    DDT.Report(DDT.T("Frames are back in their default places."))
 end
 
 function DDT.DebugLines()

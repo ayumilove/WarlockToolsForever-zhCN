@@ -64,9 +64,9 @@ local ticker, dispatcher
 
 local function TimeText(remaining)
     if remaining >= 60 then
-        return string.format("%d m", math.ceil(remaining / 60))
+        return string.format(ns.T("%d m"), math.ceil(remaining / 60))
     end
-    return string.format("%d s", math.ceil(remaining))
+    return string.format(ns.T("%d s"), math.ceil(remaining))
 end
 
 local function Redraw(button, now)

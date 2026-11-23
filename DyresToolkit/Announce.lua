@@ -15,15 +15,15 @@ local DyresToolkit = ns.toolkit
 -- icon, while a word such as {moon} works only where the reader's client
 -- knows the English word (a localization audit, 2026-11-20).
 DyresToolkit.RAID_MARKERS = {
-    {index = 0, label = "None"},
-    {index = 1, label = "Star", code = "{rt1}"},
-    {index = 2, label = "Circle", code = "{rt2}"},
-    {index = 3, label = "Diamond", code = "{rt3}"},
-    {index = 4, label = "Triangle", code = "{rt4}"},
-    {index = 5, label = "Moon", code = "{rt5}"},
-    {index = 6, label = "Square", code = "{rt6}"},
-    {index = 7, label = "Cross", code = "{rt7}"},
-    {index = 8, label = "Skull", code = "{rt8}"},
+    {index = 0, label = ns.T("None")},
+    {index = 1, label = ns.T("Star"), code = "{rt1}"},
+    {index = 2, label = ns.T("Circle"), code = "{rt2}"},
+    {index = 3, label = ns.T("Diamond"), code = "{rt3}"},
+    {index = 4, label = ns.T("Triangle"), code = "{rt4}"},
+    {index = 5, label = ns.T("Moon"), code = "{rt5}"},
+    {index = 6, label = ns.T("Square"), code = "{rt6}"},
+    {index = 7, label = ns.T("Cross"), code = "{rt7}"},
+    {index = 8, label = ns.T("Skull"), code = "{rt8}"},
 }
 
 function DyresToolkit.ValidMarker(index)

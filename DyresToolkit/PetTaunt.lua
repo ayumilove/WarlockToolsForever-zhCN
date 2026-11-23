@@ -90,8 +90,11 @@ function DTT.PetTauntText()
     end
     local on = TauntsOn()
     if #on > 0 then
-        return "Pet taunt on", table.concat(on, " and ") .. (#on > 1 and " are" or " is")
-            .. " on autocast in a group. Turn it off."
+        local names = table.concat(on, ns.T(" and "))
+        if #on > 1 then
+            return ns.T("Pet taunt on"), ns.T("%s are on autocast in a group. Turn it off."):format(names)
+        end
+        return ns.T("Pet taunt on"), ns.T("%s is on autocast in a group. Turn it off."):format(names)
     end
 end
 
@@ -149,13 +152,13 @@ local function BuildPop()
     fader:SetScript("OnFinished", function() content:Hide() end)
     pop = {frame = frame, content = content, title = title, line = line, fader = fader}
     ns.toolkit.CreateWidget({
-        addon = DTT.ADDON, key = "warnings", title = "Warning messages", frame = frame, store = DTT.db.warning,
+        addon = DTT.ADDON, key = "warnings", title = ns.T("Warning messages"), frame = frame, store = DTT.db.warning,
         width = POP_WIDTH, height = POP_HEIGHT, point = POP_PLACE, sizes = {scale = true},
         onUnlock = function(_, unlocked)
             if unlocked then
                 pop.fader:Stop()
-                pop.title:SetText("Pet taunt on")
-                pop.line:SetText("Growl is on autocast in a group. Turn it off.")
+                pop.title:SetText(ns.T("Pet taunt on"))
+                pop.line:SetText(ns.T("Growl is on autocast in a group. Turn it off."))
                 pop.content:SetAlpha(1)
                 pop.content:Show()
             elseif not pop.fader:IsPlaying() then

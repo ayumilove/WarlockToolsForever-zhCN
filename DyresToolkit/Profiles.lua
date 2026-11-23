@@ -225,35 +225,35 @@ end
 -- The settings table from an export line, or nil and why (a sentence).
 function ns.ParseSettings(addon, text)
     if type(text) ~= "string" or IsSecret(text) then
-        return nil, "Paste an export line first."
+        return nil, ns.T("Paste an export line first.")
     end
     if #text > MAX_TEXT then
-        return nil, "That text is too long to be an export line."
+        return nil, ns.T("That text is too long to be an export line.")
     end
     -- Chat, forums, and mail may wrap a line or add spaces.
     text = text:gsub("%s", "")
     if text == "" then
-        return nil, "Paste an export line first."
+        return nil, ns.T("Paste an export line first.")
     end
     local version, from, data, sum = text:match("^" .. PREFIX .. "(%d+):([%w_]+):([^:]*):(%x+)$")
     if not version then
-        return nil, "That is not a Dyre's AddOns export line."
+        return nil, ns.T("That is not a Dyre's AddOns export line.")
     end
     if tonumber(version) > FORMAT then
-        return nil, "That line comes from a newer version. Update the AddOns, then try again."
+        return nil, ns.T("That line comes from a newer version. Update the AddOns, then try again.")
     end
     if tonumber(version) < FORMAT then
-        return nil, "That line comes from a test version. Export it again."
+        return nil, ns.T("That line comes from a test version. Export it again.")
     end
     if from ~= addon then
-        return nil, "That line has " .. from .. " settings, not " .. addon .. " settings."
+        return nil, ns.T("That line has %s settings, not %s settings."):format(from, addon)
     end
     if sum:lower() ~= Checksum(data) then
-        return nil, "That line is damaged or incomplete. Copy all of it again."
+        return nil, ns.T("That line is damaged or incomplete. Copy all of it again.")
     end
     local settings, stop = Decode(data, 1, 0, {items = 0})
     if type(settings) ~= "table" or stop ~= #data + 1 then
-        return nil, "That line is damaged or incomplete. Copy all of it again."
+        return nil, ns.T("That line is damaged or incomplete. Copy all of it again.")
     end
     return settings
 end
@@ -410,7 +410,7 @@ end
 
 function Profile:Label(key)
     if key == DEFAULTS then
-        return "Defaults (a clean slate)"
+        return ns.T("Defaults (a clean slate)")
     end
     local entry = Store()[key]
     if type(entry) == "table" and Readable(entry.class) then
@@ -443,11 +443,11 @@ end
 -- is DEFAULTS. Gives true and the titles that need a reload, or nil and why.
 function Profile:Apply(sources)
     if InCombat() then
-        return nil, "Settings change out of combat."
+        return nil, ns.T("Settings change out of combat.")
     end
     local entry = Entry(ns.CharacterKey(), true)
     if not entry then
-        return nil, "Your character is not ready yet. Try again in a moment."
+        return nil, ns.T("Your character is not ready yet. Try again in a moment.")
     end
     local defaults = sources == DEFAULTS
     -- First check every loaded part: all or nothing.
@@ -457,7 +457,7 @@ function Profile:Apply(sources)
         if settings ~= nil then
             local fresh = Prepare(part, settings)
             if not fresh then
-                return nil, Title(part) .. " cannot take those settings. Nothing changed."
+                return nil, ns.T("%s cannot take those settings. Nothing changed."):format(Title(part))
             end
             prepared[#prepared + 1] = {part = part, settings = fresh}
         end
@@ -499,7 +499,7 @@ function Profile:CopyFrom(key)
     end
     local entry = key ~= ns.CharacterKey() and Entry(key) or nil
     if not entry or next(entry.parts) == nil then
-        return nil, "That character's settings are not saved."
+        return nil, ns.T("That character's settings are not saved.")
     end
     return self:Apply(Copy(entry.parts))
 end
@@ -525,7 +525,7 @@ function Profile:Import(text)
     end
     for addon, settings in pairs(data) do
         if not ValidAddOn(addon) or type(settings) ~= "table" then
-            return nil, "That line is damaged or incomplete. Copy all of it again."
+            return nil, ns.T("That line is damaged or incomplete. Copy all of it again.")
         end
     end
     return self:Apply(data)
@@ -582,7 +582,7 @@ end)
 
 -- The settings section ---------------------------------------------------------------
 
-local WHAT = "this character's settings for every Dyre's AddOn (settings, places, sizes, and sounds)"
+local WHAT = ns.T("this character's settings for every Dyre's AddOn (settings, places, sizes, and sounds)")
 
 local function Reload()
     if type(ReloadUI) == "function" then
@@ -595,10 +595,10 @@ local Show
 -- After a copy or import: a reload only for the AddOns that cannot change live.
 local function Done(what, reload)
     if #reload == 0 then
-        ns.Report(what .. ".")
+        ns.Report(ns.T("%s."):format(what))
         return
     end
-    Show("DYRE_PROFILE_RELOAD", what .. ". Reload to finish " .. table.concat(reload, ", ") .. ".", {})
+    Show("DYRE_PROFILE_RELOAD", ns.T("%s. Reload to finish %s."):format(what, table.concat(reload, ", ")), {})
 end
 
 local function Popups()
@@ -607,12 +607,12 @@ local function Popups()
     end
     StaticPopupDialogs.DYRE_PROFILE_COPY = {
         text = "%s",
-        button1 = "Copy",
-        button2 = CANCEL or "Cancel",
+        button1 = ns.T("Copy"),
+        button2 = CANCEL or ns.T("Cancel"),
         OnAccept = function(_, data)
             local ok, why = Profile:CopyFrom(data.key)
             if ok then
-                Done("Profile copied", why)
+                Done(ns.T("Profile copied"), why)
             else
                 ns.Report(why)
             end
@@ -624,7 +624,7 @@ local function Popups()
     }
     StaticPopupDialogs.DYRE_PROFILE_EXPORT = {
         text = "%s",
-        button1 = DONE or "Done",
+        button1 = DONE or ns.T("Done"),
         hasEditBox = 1,
         maxLetters = MAX_TEXT,
         editBoxWidth = 350,
@@ -651,8 +651,8 @@ local function Popups()
     }
     StaticPopupDialogs.DYRE_PROFILE_IMPORT = {
         text = "%s",
-        button1 = "Import",
-        button2 = CANCEL or "Cancel",
+        button1 = ns.T("Import"),
+        button2 = CANCEL or ns.T("Cancel"),
         hasEditBox = 1,
         maxLetters = MAX_TEXT,
         editBoxWidth = 350,
@@ -667,7 +667,7 @@ local function Popups()
             local box = dialog.GetEditBox and dialog:GetEditBox() or dialog.editBox
             local ok, why = Profile:Import(box and box:GetText())
             if ok then
-                Done("Profile imported", why)
+                Done(ns.T("Profile imported"), why)
                 return
             end
             ns.Report(why)
@@ -682,8 +682,8 @@ local function Popups()
     }
     StaticPopupDialogs.DYRE_PROFILE_RELOAD = {
         text = "%s",
-        button1 = "Reload now",
-        button2 = "Later",
+        button1 = ns.T("Reload now"),
+        button2 = ns.T("Later"),
         OnAccept = Reload,
         timeout = 0,
         whileDead = 1,
@@ -695,7 +695,7 @@ end
 
 Show = function(which, text, data)
     if InCombat() then
-        ns.Report("Settings change out of combat.")
+        ns.Report(ns.T("Settings change out of combat."))
         return
     end
     if not Popups() or type(StaticPopup_Show) ~= "function" then
@@ -797,8 +797,8 @@ function ns.AddProfileSettings(category, layout)
     local key = ns.CharacterKey()
     if type(CreateSettingsListSectionHeaderInitializer) == "function" then
         layout:AddInitializer(CreateSettingsListSectionHeaderInitializer(
-            key and ("Profile: " .. Profile:Label(key)) or "Profile",
-            "Each character has one profile, its own: its settings for every Dyre's AddOn."))
+            key and ns.T("Profile: %s"):format(Profile:Label(key)) or ns.T("Profile"),
+            ns.T("Each character has one profile, its own: its settings for every Dyre's AddOn.")))
     end
     -- This character's own profile is first in the list and chosen at first,
     -- and Copy is grey while it is chosen (John, 2026-11-15: "put my current
@@ -814,7 +814,7 @@ function ns.AddProfileSettings(category, layout)
             return source ~= own
         end
         local setting = Settings.RegisterProxySetting(category, "DYRE_PROFILE_SOURCE", Settings.VarType.String,
-            "Copy settings from", own,
+            ns.T("Copy settings from"), own,
             function() return source end,
             function(value)
                 local found = value == own or value == DEFAULTS
@@ -833,7 +833,7 @@ function ns.AddProfileSettings(category, layout)
         local function Options()
             local container = Settings.CreateControlTextContainer()
             if key then
-                container:Add(key, Profile:Label(key) .. " (this character)")
+                container:Add(key, Profile:Label(key) .. ns.T(" (this character)"))
             end
             container:Add(DEFAULTS, Profile:Label(DEFAULTS))
             for _, other in ipairs(Profile:Others()) do
@@ -842,42 +842,43 @@ function ns.AddProfileSettings(category, layout)
             return container:GetData()
         end
         rows.source = Settings.CreateDropdown(category, setting, Options,
-            "Pick another character's profile, or Defaults for a clean slate, then press Copy. It covers "
-            .. "every Dyre's AddOn.\n\nA character shows here after it logs in once with this version.")
+            ns.T("Pick another character's profile, or Defaults for a clean slate, then press Copy. It covers "
+                .. "every Dyre's AddOn.\n\nA character shows here after it logs in once with this version."))
         local function CopyChoice()
             if not CanCopy() then
-                ns.Report("Pick another character's profile, or Defaults, to copy.")
+                ns.Report(ns.T("Pick another character's profile, or Defaults, to copy."))
                 return
             end
-            Show("DYRE_PROFILE_COPY", "Copy " .. Profile:Label(source) .. " to " .. (key and Profile:Label(key)
-                or "this character") .. "?\n\nThis replaces " .. WHAT .. ".", {key = source})
+            Show("DYRE_PROFILE_COPY", ns.T("Copy %s to %s?\n\nThis replaces %s."):format(
+                Profile:Label(source), key and Profile:Label(key) or ns.T("this character"), WHAT),
+                {key = source})
         end
         local function CopyTooltip()
             if CanCopy() then
-                return "Replaces " .. WHAT .. " with the choice."
+                return ns.T("Replaces %s with the choice."):format(WHAT)
             end
-            return "Pick another character's profile, or Defaults, to copy."
+            return ns.T("Pick another character's profile, or Defaults, to copy.")
         end
-        updateCopy = AttachRowButton(rows.source, "Copy", CopyChoice, CopyTooltip, CanCopy)
+        updateCopy = AttachRowButton(rows.source, ns.T("Copy"), CopyChoice, CopyTooltip, CanCopy)
         if updateCopy then
             rows.copyOnRow = true
         else
-            rows.copy = CreateSettingsButtonInitializer("Copy the choice above", "Copy", CopyChoice,
-                "Replaces " .. WHAT .. " with the choice.", true)
+            rows.copy = CreateSettingsButtonInitializer(ns.T("Copy the choice above"), ns.T("Copy"), CopyChoice,
+                ns.T("Replaces %s with the choice."):format(WHAT), true)
             if type(rows.copy) == "table" and type(rows.copy.AddModifyPredicate) == "function" then
                 rows.copy:AddModifyPredicate(CanCopy)
             end
             layout:AddInitializer(rows.copy)
         end
     end
-    rows.export = CreateSettingsButtonInitializer("Export profile", "Export", function()
-        Show("DYRE_PROFILE_EXPORT", "Press Ctrl+C to copy " .. WHAT .. ".\nPaste it with Import on another "
-            .. "character or account.", {text = Profile:Export()})
-    end, "Shows " .. WHAT .. " as one line of text, to copy and keep or share.", true)
+    rows.export = CreateSettingsButtonInitializer(ns.T("Export profile"), ns.T("Export"), function()
+        Show("DYRE_PROFILE_EXPORT", ns.T("Press Ctrl+C to copy %s.\nPaste it with Import on another "
+            .. "character or account."):format(WHAT), {text = Profile:Export()})
+    end, ns.T("Shows %s as one line of text, to copy and keep or share."):format(WHAT), true)
     layout:AddInitializer(rows.export)
-    rows.import = CreateSettingsButtonInitializer("Import profile", "Import", function()
-        Show("DYRE_PROFILE_IMPORT", "Paste an export line (Ctrl+V).\n\nThis replaces " .. WHAT .. ".", {})
-    end, "Replaces " .. WHAT .. " with a pasted export line.", true)
+    rows.import = CreateSettingsButtonInitializer(ns.T("Import profile"), ns.T("Import"), function()
+        Show("DYRE_PROFILE_IMPORT", ns.T("Paste an export line (Ctrl+V).\n\nThis replaces %s."):format(WHAT), {})
+    end, ns.T("Replaces %s with a pasted export line."):format(WHAT), true)
     layout:AddInitializer(rows.import)
     return rows
 end

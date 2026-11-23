@@ -56,9 +56,9 @@ local SAME_COLOR = 0.15
 local LIGHTEN = 0.5
 local OUTLINE_LIGHTEN = 0.4
 local OUTLINE_ALPHA = 0.3
-local DIES_TEXT = "DIES"
+local DIES_TEXT = ns.T("DIES")
 local DIES_COLOR = {1, 0.1, 0.1}
-local DIES_FONT = "Fonts\\FRIZQT__.TTF"
+local DIES_FONT = ns.IsChinese and "Fonts\\ARKai_T.TTF" or "Fonts\\FRIZQT__.TTF"
 local DIES_SKULL = "Interface\\TargetingFrame\\UI-TargetingFrame-Skull"
 local DIES_SIZE = {target = 14, plate = 11, row = 10}
 local DIES_GAP = 2

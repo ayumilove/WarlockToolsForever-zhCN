@@ -350,7 +350,7 @@ function DyresToolkit.NoteFocusWorks()
 end
 
 -- For an AddOn's reset command: one reset is for every Dyre's AddOn.
-DyresToolkit.FOCUS_RESET_TEXT = "Focus detection reset for every Dyre's AddOn: it is learned again the first time you set a focus."
+DyresToolkit.FOCUS_RESET_TEXT = ns.T("Focus detection reset for every Dyre's AddOn: it is learned again the first time you set a focus.")
 
 function DyresToolkit.ResetFocusWorks()
     ns.db.focusWorks = nil

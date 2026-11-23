@@ -22,12 +22,12 @@ end
 
 local function BuildMenu(owner, root)
     root:CreateTitle(ns.TITLE)
-    root:CreateButton(ns.db.locked and "Unlock frames" or "Lock frames", DyresToolkit.ToggleLock)
-    root:CreateCheckbox("Show the grid", function() return ns.db.grid end,
+    root:CreateButton(ns.db.locked and ns.T("Unlock frames") or ns.T("Lock frames"), DyresToolkit.ToggleLock)
+    root:CreateCheckbox(ns.T("Show the grid"), function() return ns.db.grid end,
         function() ns.SetGrid(not ns.db.grid) end)
-    root:CreateCheckbox("Snap to the grid", function() return ns.db.snapToGrid end,
+    root:CreateCheckbox(ns.T("Snap to the grid"), function() return ns.db.snapToGrid end,
         function() ns.SetSnapToGrid(not ns.db.snapToGrid) end)
-    root:CreateButton("Settings", function() DyresToolkit.OpenSettings() end)
+    root:CreateButton(ns.T("Settings"), function() DyresToolkit.OpenSettings() end)
     local addons = DyresToolkit.AddOns()
     local withSettings = {}
     for _, info in ipairs(addons) do
@@ -86,8 +86,9 @@ function ns.InitializeMinimap()
         end,
         OnTooltipShow = function(tooltip)
             tooltip:AddLine(ns.TITLE)
-            tooltip:AddLine(ns.db.locked and "Left-click: unlock frames" or "Left-click: lock frames", 1, 1, 1)
-            tooltip:AddLine("Right-click: menu", 1, 1, 1)
+            tooltip:AddLine(ns.db.locked and ns.T("Left-click: unlock frames") or ns.T("Left-click: lock frames"),
+                1, 1, 1)
+            tooltip:AddLine(ns.T("Right-click: menu"), 1, 1, 1)
         end,
     })
     if icon then

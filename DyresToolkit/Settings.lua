@@ -7,7 +7,7 @@ local DyresToolkit = ns.toolkit
 -- CategoryList.lua). The category is made the first time anyone asks for it,
 -- so it does not matter whose PLAYER_LOGIN runs first.
 
-local HOME = "Dyre's AddOns"
+local HOME = ns.T("Dyre's AddOns")
 local REQUIRED = {
     "RegisterVerticalLayoutCategory", "RegisterVerticalLayoutSubcategory", "RegisterProxySetting",
     "RegisterAddOnCategory", "CreateCheckbox", "CreateSlider", "CreateSliderOptions", "OpenToCategory",
@@ -76,11 +76,11 @@ end
 function DyresToolkit.OpenSettings(category)
     local target = category or Home()
     if not target then
-        ns.Report("The settings page is unavailable on this client. Use /dyre unlock and /dyre lock.")
+        ns.Report(ns.T("The settings page is unavailable on this client. Use /dyre unlock and /dyre lock."))
         return false
     end
     if InCombatLockdown() then
-        ns.Report("The settings open out of combat.")
+        ns.Report(ns.T("The settings open out of combat."))
         return false
     end
     Settings.OpenToCategory(target:GetID())
@@ -108,7 +108,7 @@ function DyresToolkit.AddSettingsLink(category, layout, opts)
             or type(layout.AddInitializer) ~= "function" then
         return nil
     end
-    local missing = opts.missing or ("Install " .. opts.addon .. " from CurseForge.")
+    local missing = opts.missing or ns.T("Install %s from CurseForge."):format(opts.addon)
     local function Open()
         local info = Member(opts.addon)
         if not info or type(info.openSettings) ~= "function" then
@@ -116,13 +116,13 @@ function DyresToolkit.AddSettingsLink(category, layout, opts)
             return
         end
         if InCombatLockdown() then
-            ns.Report("The settings open out of combat.")
+            ns.Report(ns.T("The settings open out of combat."))
             return
         end
         info.openSettings()
     end
     local present = Member(opts.addon) ~= nil
-    local initializer = CreateSettingsButtonInitializer(opts.name, opts.button or "Open settings", Open,
+    local initializer = CreateSettingsButtonInitializer(opts.name, opts.button or ns.T("Open settings"), Open,
         present and opts.tooltip or missing, true)
     if type(initializer.AddModifyPredicate) == "function" then
         initializer:AddModifyPredicate(function() return Member(opts.addon) ~= nil end)
@@ -140,25 +140,26 @@ function ns.InitializeSettings()
     if not Home() then
         return
     end
-    Flag("DYRE_UNLOCKED", "Unlock frames", function() return not ns.db.locked end,
+    Flag("DYRE_UNLOCKED", ns.T("Unlock frames"), function() return not ns.db.locked end,
         function(value) DyresToolkit.SetLocked(value ~= true) end,
-        "Every Dyre's AddOn shows its frames to drag. Shift-drag moves a group of snapped frames. "
-            .. "/dyre unlock and /dyre lock do the same.")
-    Flag("DYRE_GRID", "Show the grid", function() return ns.db.grid end, ns.SetGrid,
-        "While frames are unlocked, a grid across the screen with red lines through its center.")
-    Flag("DYRE_SNAP_GRID", "Snap to the grid", function() return ns.db.snapToGrid end, ns.SetSnapToGrid,
-        "A frame you drop near a red center line centers on it, or puts its nearer edge on it. Elsewhere, an "
+        ns.T("Every Dyre's AddOn shows its frames to drag. Shift-drag moves a group of snapped frames. "
+            .. "/dyre unlock and /dyre lock do the same."))
+    Flag("DYRE_GRID", ns.T("Show the grid"), function() return ns.db.grid end, ns.SetGrid,
+        ns.T("While frames are unlocked, a grid across the screen with red lines through its center."))
+    Flag("DYRE_SNAP_GRID", ns.T("Snap to the grid"), function() return ns.db.snapToGrid end, ns.SetSnapToGrid,
+        ns.T("A frame you drop near a red center line centers on it, or puts its nearer edge on it. Elsewhere, an "
             .. "edge within a quarter of the grid size of a grey line lines up with it; when both edges are that "
             .. "close, the one that moves the least wins, so check both corners. Snapping to another Dyre's frame "
-            .. "comes first. Hold Ctrl as you drop to place a frame exactly.")
-    local size = Settings.RegisterProxySetting(home, "DYRE_GRID_SIZE", Settings.VarType.Number, "Grid size",
+            .. "comes first. Hold Ctrl as you drop to place a frame exactly."))
+    local size = Settings.RegisterProxySetting(home, "DYRE_GRID_SIZE", Settings.VarType.Number,
+        ns.T("Grid size"),
         ns.DEFAULT_GRID, function() return ns.db.gridSize end, ns.SetGridSize)
     local options = Settings.CreateSliderOptions(ns.GRID_MIN, ns.GRID_MAX, ns.GRID_STEP)
     if type(options.SetLabelFormatter) == "function" and type(MinimalSliderWithSteppersMixin) == "table"
             and MinimalSliderWithSteppersMixin.Label then
         options:SetLabelFormatter(MinimalSliderWithSteppersMixin.Label.Right)
     end
-    Settings.CreateSlider(home, size, options, "The space between grid lines.")
-    Flag("DYRE_MINIMAP", "Minimap button", function() return not ns.db.minimap.hide end, ns.SetMinimapShown,
-        "Left-click locks or unlocks frames; right-click opens a menu. /dyre minimap does the same.")
+    Settings.CreateSlider(home, size, options, ns.T("The space between grid lines."))
+    Flag("DYRE_MINIMAP", ns.T("Minimap button"), function() return not ns.db.minimap.hide end, ns.SetMinimapShown,
+        ns.T("Left-click locks or unlocks frames; right-click opens a menu. /dyre minimap does the same."))
 end

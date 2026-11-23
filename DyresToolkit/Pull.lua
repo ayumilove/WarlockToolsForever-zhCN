@@ -70,8 +70,8 @@ function DTT.PullRunner()
                     DTT.CancelPullCountdown()
                 end
                 if success == false then
-                    DTT.Report("The game refused its countdown (it may need the group leader); Dyre's Toolkit "
-                        .. "users in your group see the toolkit's.")
+                    DTT.Report(ns.T("The game refused its countdown (it may need the group leader); "
+                        .. "Dyre's Toolkit users in your group see the toolkit's."))
                 end
             end
         end
@@ -93,17 +93,17 @@ function DTT.PlayerName()
     return type(UnitName) == "function" and UnitName("player") or nil
 end
 
-local RUNNER_NAMES = {dbm = "Deadly Boss Mods", bigwigs = "BigWigs", game = "the game's countdown",
-    toolkit = "Dyre's Toolkit's countdown"}
+local RUNNER_NAMES = {dbm = ns.T("Deadly Boss Mods"), bigwigs = ns.T("BigWigs"), game = ns.T("the game's countdown"),
+    toolkit = ns.T("Dyre's Toolkit's countdown")}
 
 function DTT.PullRunnerName(kind)
-    return RUNNER_NAMES[kind] or "none"
+    return RUNNER_NAMES[kind] or ns.T("none")
 end
 
 -- seconds: from /dtt pull N, else the saved length; 0 cancels.
 function DTT.StartPull(seconds)
     if not DTT.Owns("pull") then
-        DTT.Report("Another Dyre's AddOn runs the pull countdown.")
+        DTT.Report(ns.T("Another Dyre's AddOn runs the pull countdown."))
         return false
     end
     if seconds ~= 0 then
@@ -111,7 +111,7 @@ function DTT.StartPull(seconds)
     end
     local kind, run = DTT.PullRunner()
     if not run then
-        DTT.Report("This client has no pull countdown, and neither DBM nor BigWigs is loaded.")
+        DTT.Report(ns.T("This client has no pull countdown, and neither DBM nor BigWigs is loaded."))
         return false
     end
     run(seconds)
@@ -345,7 +345,8 @@ local function DrawSecond(whole)
     display.number:SetText(tostring(whole))
     display.number:SetTextColor(color[1], color[2], color[3])
     display.bar:SetVertexColor(color[1], color[2], color[3])
-    display.line:SetText(pull.starter and ("Pull in " .. whole .. " - " .. pull.starter) or ("Pull in " .. whole))
+    display.line:SetText(pull.starter and ns.T("Pull in %d - %s"):format(whole, pull.starter)
+        or ns.T("Pull in %d"):format(whole))
     Restart(display.pop)
 end
 
@@ -392,7 +393,7 @@ local function Step()
     local whole = math.ceil(left - 0.05)
     if whole <= 0 then
         Clear()
-        Splash("PULL!", GREEN, SPLASH_SIZE, display.go)
+        Splash(ns.T("PULL!"), GREEN, SPLASH_SIZE, display.go)
         DTT.PlayChoice(DTT.db.pullGo, DTT.DEFAULT_PULL_GO, "Pull")
         return
     end
@@ -442,7 +443,7 @@ function DTT.CancelPullCountdown()
     StopTimer()
     Clear()
     if display then
-        Splash("Pull cancelled", GREY, CANCEL_SIZE, display.cancelled)
+        Splash(ns.T("Pull cancelled"), GREY, CANCEL_SIZE, display.cancelled)
     end
     return true
 end
@@ -768,7 +769,7 @@ local function BuildDisplay()
         splash = splash, pop = pop, drain = drain, drainScale = drainScale, go = go, cancelled = cancelled,
         font = font}
     display.widget = ns.toolkit.CreateWidget({
-        addon = DTT.ADDON, key = "pullTimer", title = "Pull countdown", frame = frame, store = DTT.db.pullTimer,
+        addon = DTT.ADDON, key = "pullTimer", title = ns.T("Pull countdown"), frame = frame, store = DTT.db.pullTimer,
         width = DISPLAY_WIDTH, height = DISPLAY_HEIGHT, point = DISPLAY_PLACE,
         sizes = {scale = true, opacity = true},
         onUnlock = function(_, unlocked)

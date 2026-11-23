@@ -22,7 +22,7 @@ local DyresToolkit = ns.toolkit
 
 local DEFAULT_KEYS = {position = "position", scale = "scale", width = "width", height = "height",
     opacity = "opacity"}
-local LABELS = {scale = "Size", width = "Width", height = "Height", opacity = "Opacity"}
+local LABELS = {scale = ns.T("Size"), width = ns.T("Width"), height = ns.T("Height"), opacity = ns.T("Opacity")}
 local PERCENT = {scale = true, opacity = true}
 local DEFAULT_SCALE = {min = 50, max = 150, step = 5, default = 100}
 local DEFAULT_OPACITY = {min = 10, max = 100, step = 5, default = 100}
@@ -210,7 +210,8 @@ local function CreateMover(widget)
     mover:EnableMouse(false)
     mover.hint = mover:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
     mover.hint:SetPoint("BOTTOM", mover, "TOP", 0, 2)
-    mover.hint:SetText(widget.dyre.hint or (widget.dyre.title .. " · drag to move · /dyre lock when done"))
+    mover.hint:SetText(widget.dyre.hint or ns.T("%s · drag to move · /dyre lock when done")
+        :format(widget.dyre.title))
     return mover
 end
 
@@ -506,21 +507,23 @@ function DyresToolkit.AddWidgetSettings(category, layout, widget, opts)
                 range.default, function() return widget:GetSetting(name) end,
                 function(value) widget:SetSetting(name, value) end)
             local tooltip = tooltips[name] or (name == "opacity"
-                and "How solid it is. It fades at once, also in combat."
-                or ("Its " .. label:lower():gsub(" %(%%%)", "") .. ". A change in combat applies when combat ends."))
+                and ns.T("How solid it is. It fades at once, also in combat.")
+                or ns.T("Its %s. A change in combat applies when combat ends.")
+                    :format(label:lower():gsub(" %(%%%)", "")))
             ns.AddDefaultTick(Settings.CreateSlider(category, setting, SliderOptions(name, range), tooltip), range)
         end
     end
     local resizable = #widget.dyre.sizes.order > (widget.dyre.sizes.opacity and 1 or 0)
     if resizable and type(CreateSettingsButtonInitializer) == "function" and type(layout) == "table"
             and type(layout.AddInitializer) == "function" then
-        layout:AddInitializer(CreateSettingsButtonInitializer(widget.dyre.title, opts.resetLabel or "Reset size",
+        layout:AddInitializer(CreateSettingsButtonInitializer(widget.dyre.title,
+            opts.resetLabel or ns.T("Reset size"),
             function()
                 widget:ResetSize()
                 for _, variable in ipairs(variables) do
                     Settings.NotifyUpdate(variable)
                 end
-            end, opts.resetTooltip or "Back to its own size. Opacity stays as it is.", true))
+            end, opts.resetTooltip or ns.T("Back to its own size. Opacity stays as it is."), true))
     end
     return true
 end

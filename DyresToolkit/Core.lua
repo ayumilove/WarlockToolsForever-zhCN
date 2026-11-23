@@ -129,12 +129,12 @@ function DyresToolkit.SetLocked(locked)
         ns.RefreshMinimap()
     end
     if locked then
-        ns.Report("Frames locked.")
+        ns.Report(ns.T("Frames locked."))
     elseif InCombatLockdown() then
-        ns.Report("Frames unlocked: they can be dragged after combat.")
+        ns.Report(ns.T("Frames unlocked: they can be dragged after combat."))
     else
-        ns.Report("Frames unlocked: drag them where you want (Shift-drag moves a snapped group), "
-            .. "then type /dyre lock.")
+        ns.Report(ns.T("Frames unlocked: drag them where you want (Shift-drag moves a snapped group), "
+            .. "then type /dyre lock."))
     end
 end
 
@@ -165,8 +165,8 @@ function ns.SetGridSize(size)
 end
 
 -- /dyre, and /dyretoolkit in case another AddOn uses /dyre.
-local USAGE = "Use /dyre (settings), /dyre unlock, /dyre lock, /dyre grid, /dyre snap, /dyre minimap, "
-    .. "/dyre debug, /dyre pull [seconds], /dyre tank_reset, /dyre tank_debug, or /dyre debug_threat."
+local USAGE = ns.T("Use /dyre (settings), /dyre unlock, /dyre lock, /dyre grid, /dyre snap, /dyre minimap, "
+    .. "/dyre debug, /dyre pull [seconds], /dyre tank_reset, /dyre tank_debug, or /dyre debug_threat.")
 
 function ns.HandleCommand(message)
     -- The tank and threat words (Tank.lua), some with an argument.
@@ -183,17 +183,18 @@ function ns.HandleCommand(message)
         DyresToolkit.Lock()
     elseif command == "grid" then
         ns.SetGrid(not ns.db.grid)
-        ns.Report(ns.db.grid and "The grid shows while frames are unlocked." or "The grid is hidden.")
+        ns.Report(ns.db.grid and ns.T("The grid shows while frames are unlocked.") or ns.T("The grid is hidden."))
     elseif command == "snap" then
         ns.SetSnapToGrid(not ns.db.snapToGrid)
-        ns.Report(ns.db.snapToGrid and "Frames snap to the grid." or "Frames no longer snap to the grid.")
+        ns.Report(ns.db.snapToGrid and ns.T("Frames snap to the grid.")
+            or ns.T("Frames no longer snap to the grid."))
     elseif command == "minimap" then
         ns.SetMinimapShown(ns.db.minimap.hide == true)
     elseif command == "debug" then
         -- Until reload: failing hooks of other AddOns are said in chat
         -- (HealthBars.lua), the ones so far first.
         ns.debug = not ns.debug
-        ns.Report(ns.debug and "Debug mode is on until you reload." or "Debug mode is off.")
+        ns.Report(ns.debug and ns.T("Debug mode is on until you reload.") or ns.T("Debug mode is off."))
         if ns.debug and ns.ReportProblems then
             ns.ReportProblems()
         end

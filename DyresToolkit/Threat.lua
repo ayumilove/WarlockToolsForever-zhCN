@@ -73,8 +73,8 @@ local DTT = ns.tank
 -- /dtt debug_threat, 2026-11-11), so plates take their color from it.
 local GREEN, YELLOW, RED, BLUE, WHITE = {0.2, 1, 0.2}, {1, 0.85, 0}, {1, 0.2, 0.2}, {0.3, 0.6, 1}, {1, 1, 1}
 local ORANGE = {1, 0.5, 0}
-local OFF_TANK = {word = "OFF", color = BLUE}
-local LOSING = {word = "LOSING", color = ORANGE, wordOnly = true}
+local OFF_TANK = {word = ns.T("OFF"), color = BLUE}
+local LOSING = {word = ns.T("LOSING"), color = ORANGE, wordOnly = true}
 -- The red and losing sounds are the player's choices (Tank.lua DTT.SOUNDS;
 -- defaults: raid warning and quest failed, so the two can be told apart).
 local LOSING_GAP = 2
@@ -90,20 +90,20 @@ local VIEWS = {
     tank = {
         icon = TEXTURES .. "ShieldFill",
         edge = TEXTURES .. "ShieldEdge",
-        [3] = {word = "OK", color = GREEN},
-        [2] = {word = "LOW", color = YELLOW},
-        [1] = {word = "LOST", color = RED},
-        [0] = {word = "LOST", color = RED},
+        [3] = {word = ns.T("OK"), color = GREEN},
+        [2] = {word = ns.T("LOW"), color = YELLOW},
+        [1] = {word = ns.T("LOST"), color = RED},
+        [0] = {word = ns.T("LOST"), color = RED},
     },
     dps = {
         icon = TEXTURES .. "SwordsFill",
         edge = TEXTURES .. "SwordsEdge",
-        [0] = {word = "OK", color = GREEN},
-        [1] = {word = "HIGH", color = ORANGE},
+        [0] = {word = ns.T("OK"), color = GREEN},
+        [1] = {word = ns.T("HIGH"), color = ORANGE},
         -- Early, on a readable percent at EARLY_WARNING or more: no sound.
-        early = {word = "HIGH", color = YELLOW},
-        [2] = {word = "AGGRO", color = RED},
-        [3] = {word = "AGGRO", color = RED},
+        early = {word = ns.T("HIGH"), color = YELLOW},
+        [2] = {word = ns.T("AGGRO"), color = RED},
+        [3] = {word = ns.T("AGGRO"), color = RED},
     },
 }
 local ICON_SIZE = 14

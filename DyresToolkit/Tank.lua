@@ -104,19 +104,19 @@ DTT.BAR_MODES = {"auto", "always", "never"}
 -- old) stays saved; the default game sound plays until it is back.
 DTT.SOUND_GROUP = "Game Warnings"
 DTT.SOUNDS = {
-    {key = "none", label = "None"},
-    {key = "raidWarning", label = "Raid warning", kit = "RAID_WARNING", id = 8959},
-    {key = "questFailed", label = "Quest failed", id = 847},
-    {key = "readyCheck", label = "Ready check", kit = "READY_CHECK", id = 8960},
-    {key = "alarmClock", label = "Alarm clock", kit = "ALARM_CLOCK_WARNING_3", id = 12889},
-    {key = "bossEmote", label = "Boss emote", kit = "RAID_BOSS_EMOTE_WARNING", id = 12197},
-    {key = "bossWhisper", label = "Boss whisper", kit = "UI_RAID_BOSS_WHISPER_WARNING", id = 37666},
-    {key = "queueReady", label = "Battleground ready", kit = "PVP_THROUGH_QUEUE", id = 8459},
-    {key = "mapPing", label = "Map ping", kit = "MAP_PING", id = 3175},
+    {key = "none", label = ns.T("None")},
+    {key = "raidWarning", label = ns.T("Raid warning"), kit = "RAID_WARNING", id = 8959},
+    {key = "questFailed", label = ns.T("Quest failed"), id = 847},
+    {key = "readyCheck", label = ns.T("Ready check"), kit = "READY_CHECK", id = 8960},
+    {key = "alarmClock", label = ns.T("Alarm clock"), kit = "ALARM_CLOCK_WARNING_3", id = 12889},
+    {key = "bossEmote", label = ns.T("Boss emote"), kit = "RAID_BOSS_EMOTE_WARNING", id = 12197},
+    {key = "bossWhisper", label = ns.T("Boss whisper"), kit = "UI_RAID_BOSS_WHISPER_WARNING", id = 37666},
+    {key = "queueReady", label = ns.T("Battleground ready"), kit = "PVP_THROUGH_QUEUE", id = 8459},
+    {key = "mapPing", label = ns.T("Map ping"), kit = "MAP_PING", id = 3175},
     -- The game's battleground countdown sounds, the pull countdown's
     -- defaults (both clients' SoundKitConstants.lua).
-    {key = "countdownTick", label = "Countdown tick", kit = "UI_BATTLEGROUND_COUNTDOWN_TIMER", id = 25477},
-    {key = "countdownGo", label = "Countdown go", kit = "UI_BATTLEGROUND_COUNTDOWN_FINISHED", id = 25478},
+    {key = "countdownTick", label = ns.T("Countdown tick"), kit = "UI_BATTLEGROUND_COUNTDOWN_TIMER", id = 25477},
+    {key = "countdownGo", label = ns.T("Countdown go"), kit = "UI_BATTLEGROUND_COUNTDOWN_FINISHED", id = 25478},
 }
 DTT.SOUND_CHOICES, DTT.SOUND_LABELS = {}, {}
 for _, sound in ipairs(DTT.SOUNDS) do
@@ -396,10 +396,10 @@ end
 
 -- Commands ---------------------------------------------------------------------------
 
-local USAGE = "Use /dtt (settings), /dtt pull [seconds], /dtt reset, /dtt debug, /dtt debug_threat, "
+local USAGE = ns.T("Use /dtt (settings), /dtt pull [seconds], /dtt reset, /dtt debug, /dtt debug_threat, "
     .. "/dtt debug_taunts, or /dtt debug_dots. /dyre pull, /dyre tank_reset, /dyre tank_debug, "
-    .. "/dyre debug_threat, /dyre debug_taunts, and /dyre debug_dots do the same."
-local UNAVAILABLE = "The threat labels and tank tools are off on this client: "
+    .. "/dyre debug_threat, /dyre debug_taunts, and /dyre debug_dots do the same.")
+local UNAVAILABLE = ns.T("The threat labels and tank tools are off on this client: ")
 
 -- /dtt words, and the /dyre words for the same commands. "" opens the settings.
 local COMMANDS = {
@@ -448,8 +448,8 @@ function DTT.ParseCommand(message, dyre)
     -- 0 cancels a running pull (as DBM's and BigWigs' /pull 0).
     if not seconds or seconds ~= math.floor(seconds) or (seconds ~= 0 and seconds < DTT.PULL_MIN)
             or seconds > DTT.PULL_MAX then
-        return nil, "Give the pull time as whole seconds, " .. DTT.PULL_MIN .. " to " .. DTT.PULL_MAX
-            .. ", or 0 to cancel."
+        return nil, ns.T("Give the pull time as whole seconds, %d to %d, or 0 to cancel."):format(
+            DTT.PULL_MIN, DTT.PULL_MAX)
     end
     return command, seconds
 end
@@ -521,8 +521,8 @@ local REQUIRED_APIS = {
 local function CheckInstall()
     for _, name in ipairs(REQUIRED_NAMESPACE) do
         if type(DTT[name]) ~= "function" then
-            return false, "the toolkit's files are from different versions (missing " .. name
-                .. "). Reinstall Dyre's Toolkit, then restart the client."
+            return false, ns.T("the toolkit's files are from different versions (missing %s). "
+                .. "Reinstall Dyre's Toolkit, then restart the client."):format(name)
         end
     end
     for _, api in ipairs(REQUIRED_APIS) do
@@ -531,7 +531,8 @@ local function CheckInstall()
             owner = rawget(_G, api[1])
         end
         if type(owner) ~= "table" or type(owner[api[2]]) ~= "function" then
-            return false, "this client lacks " .. (api[1] and (api[1] .. "." .. api[2]) or api[2]) .. "."
+            return false, ns.T("this client lacks %s."):format(
+                api[1] and (api[1] .. "." .. api[2]) or api[2])
         end
     end
     return true
@@ -595,8 +596,7 @@ function ns.InitializeTank()
     DTT.available, DTT.unavailable = available, why
     local conflict = FindSlashConflict()
     if conflict then
-        DTT.Report("Another AddOn (" .. conflict .. ") also uses " .. PRIMARY_SLASH .. ". Use "
-            .. BACKUP_SLASH .. " or /dyre instead.")
+        DTT.Report(ns.T("Another AddOn (%s) also uses /dtt. Use /tanktools or /dyre instead."):format(conflict))
     end
     -- Quiet at login (the toolkit loads with every Dyre's AddOn); /dtt and
     -- /dtt debug say why.

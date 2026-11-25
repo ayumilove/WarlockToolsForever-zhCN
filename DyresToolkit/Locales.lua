@@ -48,6 +48,9 @@ local zhCN = {
     ["Grid size"] = "网格大小",
     ["The space between grid lines."] = "网格线之间的间距。",
     ["Minimap button"] = "小地图按钮",
+    ["Welcome messages at login"] = "登录时显示欢迎语",
+    ["Each Dyre's AddOn says its name and version in chat at login. Turn this off to hide those lines for every Dyre's AddOn. Errors and problems always show."] =
+        "每个 Dyre 插件登录时都会在聊天框报出名字和版本。关掉后所有 Dyre 插件都不再显示这些行；错误与问题仍会显示。",
 
     -- Widgets
     ["Size"] = "大小",

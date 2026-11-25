@@ -159,7 +159,14 @@ function ns.InitializeSettings()
             and MinimalSliderWithSteppersMixin.Label then
         options:SetLabelFormatter(MinimalSliderWithSteppersMixin.Label.Right)
     end
-    Settings.CreateSlider(home, size, options, ns.T("The space between grid lines."))
+    ns.AddDefaultTick(Settings.CreateSlider(home, size, options, ns.T("The space between grid lines.")),
+        {min = ns.GRID_MIN, max = ns.GRID_MAX, default = ns.DEFAULT_GRID})
     Flag("DYRE_MINIMAP", ns.T("Minimap button"), function() return not ns.db.minimap.hide end, ns.SetMinimapShown,
         ns.T("Left-click locks or unlocks frames; right-click opens a menu. /dyre minimap does the same."))
+    Flag("DYRE_WELCOME", ns.T("Welcome messages at login"), function() return ns.db.welcome end, ns.SetWelcome,
+        ns.T("Each Dyre's AddOn says its name and version in chat at login. Turn this off to hide those lines "
+            .. "for every Dyre's AddOn. Errors and problems always show."))
+    Flag("DYRE_WELCOME", "Welcome messages at login", function() return ns.db.welcome end, ns.SetWelcome,
+        "Each Dyre's AddOn says its name and version in chat at login. Turn this off to hide those lines "
+            .. "for every Dyre's AddOn. Errors and problems always show.")
 end

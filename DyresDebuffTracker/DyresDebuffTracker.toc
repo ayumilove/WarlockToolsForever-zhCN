@@ -4,11 +4,11 @@
 ## Notes: Tracks your DoTs and crowd control for every class, and shows when your DoTs will kill
 ## Notes-zhCN: 追踪各职业的持续伤害与控制，并预测你的持续伤害何时能击杀目标
 ## Author: Dyre
-## Version: 1.5.0
-## X-DDT-Fork: 1.5.0-fork.1
+## Version: 1.7.0
+## X-DDT-Fork: 1.7.0-fork.1
 ## IconTexture: Interface\AddOns\DyresDebuffTracker\Textures\Icon
 ## Category: Buffs & Debuffs
-## OptionalDeps: DyresToolkit
+## OptionalDeps: DyresToolkit, DyresSounds
 ## Group: DyresToolkit
 ## SavedVariablesPerCharacter: DyresDebuffTrackerDB
 
@@ -17,4 +17,5 @@ Core.lua
 Engines.lua
 Warnings.lua
 Frost.lua
+Chime.lua
 Options.lua

@@ -224,6 +224,7 @@ end
 local function Dots() return DDT.db.dots end
 local function Frost() return DDT.db.frost end
 local function Brand() return DDT.db.brand end
+local function Chill() return DDT.db.wintersChill end
 local function Predict() return DDT.db.predict end
 local function Control() return DDT.db.control end
 
@@ -245,6 +246,84 @@ local function FrostSection(category, layout)
             :format(offset.min, offset.max), DDT.RefreshFrost), master, On)
     Nest(Slider(category, "DDT_FROST_SIZE", DDT.T("Arc size"), Frost, "size", size.default, size.min, size.max,
         DDT.T("The arcs' size, in percent: %d to %d."):format(size.min, size.max), DDT.RefreshFrost), master, On)
+end
+
+-- The Mage's Winter's Chill arc (Frost.lua; John, 2026-11-22: "add a
+-- similar halo above the nameplate ... with up to 5 cells (one per charge)").
+-- This AddOn's own, as the arcs: never greyed for a Tools AddOn, but greyed
+-- without the Winter's Chill talent (John, 2026-11-23: "make sure this only
+-- shows if the player has the talent for it"); Preview, Test chime, and Reset
+-- still work. Every change applies at once.
+local CHILL_TALENT_LINE = DDT.T(" Needs the Winter's Chill talent (Frost).")
+
+local function NeedsTalent(initializer)
+    if initializer and type(initializer.AddModifyPredicate) == "function" then
+        initializer:AddModifyPredicate(DDT.ChillTalentKnown)
+    end
+    return initializer
+end
+
+local function ChillSection(category, layout)
+    if DDT.class ~= "MAGE" or not DDT.chillArcs then
+        return
+    end
+    Heading(layout, DDT.T("Winter's Chill"))
+    local master = NeedsTalent(Flag(category, "DDT_CHILL", DDT.T("Show"), Chill, "enabled", true,
+        DDT.T("A blue ice arc of five segments above an enemy's nameplate while your Winter's Chill is on it: one "
+            .. "more segment turns white with each stack, up to %d, as combo points. Your Frost spells add the "
+            .. "stacks."):format(DDT.CHILL_MOST) .. CHILL_TALENT_LINE,
+        DDT.RefreshChill))
+    local function On() return DDT.db.wintersChill.enabled end
+    local offset, size = DDT.CHILL_OFFSET, DDT.CHILL_SIZE
+    NeedsTalent(Nest(Slider(category, "DDT_CHILL_SIZE", DDT.T("Size"), Chill, "size", size.default, size.min,
+        size.max, DDT.T("The arc's size, in percent: %d to %d."):format(size.min, size.max) .. CHILL_TALENT_LINE,
+        DDT.RefreshChill, function(value) return string.format("%d%%", value) end), master, On))
+    NeedsTalent(Nest(Slider(category, "DDT_CHILL_OFFSET", DDT.T("Height above nameplate"), Chill, "offset",
+        offset.default, offset.min, offset.max,
+        DDT.T("How far above the nameplate's health bar the arc sits, in pixels: %d to %d. The default sits above "
+            .. "the frozen and chilled arcs."):format(offset.min, offset.max) .. CHILL_TALENT_LINE,
+        DDT.RefreshChill), master, On))
+    Button(layout, "Winter's Chill", DDT.T("Preview"), DDT.PreviewChill,
+        DDT.T("Shows the arc on your target's nameplate with no Winter's Chill on it (%d of %d white), so you can "
+            .. "set Size and Height. Press again, or change target, to end it.")
+            :format(DDT.CHILL_PREVIEW, DDT.CHILL_MOST))
+    -- The stack chime (Chime.lua): the combat log (Classic Era) or the game's
+    -- aura sounds (WoW: Forever).
+    local chimeMode = DDT.ChillChimeMode()
+    if chimeMode then
+        local about = chimeMode == "aura"
+            and ("A note when Winter's Chill goes on your target, and another note as each stack after it goes on "
+                .. "(this client cannot count the stacks, so the notes do not rise). A stack that drops, or the "
+                .. "debuff ending, plays nothing. Another Mage's Winter's Chill on your target may chime too. "
+                .. "Needs Dyre's Sounds.")
+            or ("A note as each stack of your Winter's Chill goes on a mob: rising from 1 to " .. (DDT.CHILL_MOST - 1)
+                .. ", and a held high note at " .. DDT.CHILL_MOST .. ". A stack that drops, or the debuff ending, "
+                .. "plays nothing. Only your target's stacks chime; another Mage's Winter's Chill does not. "
+                .. "Needs Dyre's Sounds.")
+        NeedsTalent(Flag(category, "DDT_CHILL_CHIME", DDT.T("Stack chime"), Chill, "chime", true,
+            DDT.T(about) .. CHILL_TALENT_LINE, DDT.RefreshChillChime))
+        local function ChimeOn() return DDT.db.wintersChill.chime end
+        local sets = {}
+        for _, key in ipairs(DDT.CHILL_CHIME_ORDER) do
+            sets[#sets + 1] = {key, DDT.T(DDT.CHILL_CHIME_SETS[key].label)}
+        end
+        local noteSet = Choice(category, "DDT_CHILL_NOTESET", DDT.T("Note set"), Chill, "noteSet",
+            DDT.CHILL_CHIME_DEFAULT, sets,
+            DDT.T("The chime's instrument, from Dyre's Sounds.") .. CHILL_TALENT_LINE, function()
+                DDT.RefreshChillChime()
+                DDT.PlayChillNote(DDT.ChillChimeNote(DDT.CHILL_MOST, DDT.db.wintersChill.noteSet, chimeMode),
+                    "Winter's Chill")
+            end)
+        if noteSet and type(noteSet.AddModifyPredicate) == "function" then
+            noteSet:AddModifyPredicate(ChimeOn)
+        end
+        NeedsTalent(noteSet)
+        Button(layout, "Winter's Chill", DDT.T("Test chime"), DDT.TestChillChime,
+            DDT.T("Plays the chime for stacks 1 to %d, one after another."):format(DDT.CHILL_MOST))
+    end
+    Button(layout, "Winter's Chill", DDT.T("Reset Winter's Chill"), DDT.ResetChill,
+        DDT.T("Show, Size, Height, and the chime back to their defaults: on, %d%%, %d pixels, chime on, %s.")
+            :format(size.default, offset.default, DDT.T(DDT.CHILL_CHIME_SETS[DDT.CHILL_CHIME_DEFAULT].label)))
 end
 
 -- The Warlock's Demonic Brand pentagram (Frost.lua; John, via the lead,
@@ -436,6 +515,7 @@ local function DotsPage(parent)
     DDT.dotsCategory = category
     if not Status(layout, "dots", NO_DOTS) then
         FrostSection(category, layout)
+        ChillSection(category, layout)
         BrandSection(category, layout)
         return
     end
@@ -516,7 +596,7 @@ local function DotsPage(parent)
                 .. "The target and focus rows then do not recast a DoT when you click them."), Rebuilt), "dots"),
             master, On)
     end
-    -- Fork 1.5.0-fork.1: the hover line (Toolkit 2.12.0-fork.1) and a warning
+    -- Fork 1.7.0-fork.1: the hover line (Toolkit 2.14.1-fork.1) and a warning
     -- shortly before a DoT ends (Warnings.lua).
     Nest(OnlyWhenOurs(Flag(category, "DDT_DOTS_HOVER_LINE", DDT.T("Gold line on hover"), Dots, "hoverLine",
         true, DDT.T("With the mouse on a row, or on a DoT icon of the target or focus row, gold sparks flow "
@@ -729,6 +809,7 @@ local function DotsPage(parent)
         end
     end
     FrostSection(category, layout)
+    ChillSection(category, layout)
     BrandSection(category, layout)
 end
 
@@ -756,7 +837,7 @@ local function ControlPage(parent)
             break
         end
     end
-    -- Fork 1.5.0-fork.1: a warning shortly before Banish ends (Warnings.lua).
+    -- Fork 1.7.0-fork.1: a warning shortly before Banish ends (Warnings.lua).
     for _, spell in ipairs(spells) do
         if spell.key == "banish" then
             Nest(OnlyWhenOurs(Flag(category, "DDT_CONTROL_BANISH_WARN",

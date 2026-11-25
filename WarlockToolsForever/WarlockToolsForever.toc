@@ -4,8 +4,8 @@
 ## Notes: Quality-of-life tools for Warlocks in WoW Forever
 ## Notes-zhCN: 魔兽世界：无限 术士助手：灵魂碎片管理、石头按钮与团队通报（汉化增强版）
 ## Author: Dyre
-## Version: 1.12.2
-## X-WTF-Fork: 1.12.2-fork.1
+## Version: 1.12.3
+## X-WTF-Fork: 1.12.3-fork.1
 ## IconTexture: Interface\Icons\INV_Misc_Gem_Amethyst_02
 ## Category: Warlock
 ## Group: DyresToolkit

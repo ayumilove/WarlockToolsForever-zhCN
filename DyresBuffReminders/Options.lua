@@ -387,47 +387,6 @@ local function AddComboSection()
         .. "Spend follow the set unless you chose your own."), comboSwitch, ComboOn)
 end
 
--- Winter's Chill stack chimes (John, 2026-11-15), for a Mage on Classic Era:
--- its own section, since Era has no Proc Chimes section (no aura sounds).
-local function AddWintersChillSection()
-    if not DBR.HasWintersChill() then
-        return
-    end
-    Heading("Winter's Chill Chimes")
-    local tooltip = "A note as each stack of your Winter's Chill goes on your target, rising from 1 to 4, and the "
-        .. "held high note at 5, as combo point chimes play. Also in combat. A stack that drops, or the debuff "
-        .. "ending, plays nothing."
-    if not DBR.SoundLibrary() then
-        tooltip = tooltip .. " Install Dyre's Sounds to hear them."
-    end
-    local switch = Flag("DBR_WINTERSCHILL_ENABLED", "Enable", "wintersChill", "enabled", true, tooltip,
-        DBR.ApplyWintersChill)
-    if type(Settings.CreateDropdown) ~= "function" or type(Settings.CreateControlTextContainer) ~= "function" then
-        return
-    end
-    local setting = Settings.RegisterProxySetting(category, "DBR_WINTERSCHILL_NOTESET", Settings.VarType.String,
-        "Note set", DBR.COMBO_DEFAULT_SET, function() return DBR.db.wintersChill.noteSet end,
-        function(value)
-            local set = DBR.COMBO_SETS[value]
-            if set and set.notes and set.full then
-                DBR.db.wintersChill.noteSet = value
-                DBR.PreviewWintersChill()
-            end
-        end)
-    local function Choices()
-        local container = Settings.CreateControlTextContainer()
-        for _, key in ipairs(DBR.COMBO_SET_ORDER) do
-            if DBR.COMBO_SETS[key].notes then
-                container:Add(key, DBR.COMBO_SETS[key].label)
-            end
-        end
-        return container:GetData()
-    end
-    Nest(Settings.CreateDropdown(category, setting, Choices, "The notes for each stack: Dyre's Bassoon (a quick "
-        .. "climb to a held F) or Dyre's Sax (a scale to the held high Bb). Choosing one plays the held note."),
-        switch, function() return DBR.db.wintersChill.enabled end)
-end
-
 -- The cast chimes section (author, 1.4.0), for a class with any.
 local function AddCastsSection()
     local spells = DBR.ClassCasts(DBR.classFile)
@@ -472,6 +431,10 @@ local function AddChimesSection()
     local leadSlider = Settings.CreateSlider(category, lead,
         SliderOptions(DBR.CHIME_LEAD_MIN, DBR.CHIME_LEAD_MAX, DBR.CHIME_LEAD_STEP),
         "How long before a cooldown ends the chime plays, so you can act the moment it is ready.")
+    if type(DBR.toolkit.AddDefaultTick) == "function" then
+        DBR.toolkit.AddDefaultTick(leadSlider, {min = DBR.CHIME_LEAD_MIN, max = DBR.CHIME_LEAD_MAX,
+            default = DBR.DEFAULT_CHIME_LEAD})
+    end
     Nest(leadSlider, chimesSwitch, function() return DBR.db.chimes.enabled end)
     local spells = DBR.ClassChimes(DBR.classFile)
     if #spells == 0 then
@@ -723,6 +686,10 @@ local function AddConsumablesSection()
         local slider = Settings.CreateSlider(category, warn,
             SliderOptions(DBR.AMMO_WARN_MIN, DBR.AMMO_WARN_MAX, DBR.AMMO_WARN_STEP),
             "The ammo count that turns red and pulses.")
+        if type(DBR.toolkit.AddDefaultTick) == "function" then
+            DBR.toolkit.AddDefaultTick(slider, {min = DBR.AMMO_WARN_MIN, max = DBR.AMMO_WARN_MAX,
+                default = DBR.DEFAULT_AMMO_WARN})
+        end
         Nest(slider, ammoSwitch, function() return saved.enabled and saved.ammo end)
     end
     for _, reagent in ipairs(known) do
@@ -952,7 +919,6 @@ function DBR.InitializeOptions()
     AddProcsSection()
     AddCastsSection()
     AddComboSection()
-    AddWintersChillSection()
 end
 
 function DBR.OpenSettings()

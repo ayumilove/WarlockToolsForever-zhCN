@@ -19,7 +19,8 @@ local addonName, DDT = ...
 -- Each holder sits on the bar the Toolkit's FindPlateBar finds (Plater,
 -- Threat Plates, and the others, as DIES does), else on the plate.
 -- Events only: no OnUpdate, no polling.
--- The same builder draws the Warlock's Demonic Brand pentagram (below).
+-- The same builder draws the Warlock's Demonic Brand pentagram and the
+-- Mage's Winter's Chill arc (below).
 
 -- The debuffs, from local sources only (never guessed):
 --   TFB  TalentsForeverBook's Data.lua (Forever beta build 1.60.1.70755,
@@ -99,6 +100,40 @@ DDT.BRAND_SPELL = 1293696
 DDT.BRAND_OFFSET = {min = 0, max = 60, default = 10}
 DDT.BRAND_SIZE = {min = 50, max = 200, default = 100}
 
+-- Winter's Chill, for Mages (John, 2026-11-22: "add a similar halo above the
+-- nameplate (we do for chilled/frozen) with up to 5 cells (one per charge)
+-- (like a rogue/druid combo-point counter)"; then the same day: "I'm thinking
+-- blue frostballs that turn white as the stack builds"). A Frost talent: your Frost
+-- spells may put Winter's Chill on the target, up to 5 stacks. Sources (web,
+-- 2026-11-22; not yet checked in the client, TESTING.md asks for a /dump):
+--   Wowhead forever/spell=11180: the talent; its proc triggers spell 12579.
+--   Wowhead forever/spell=12579: the debuff, 15 sec, Magic, flags "DoT
+--        Stacking Rule" and "Nameplate Personal Buffs/Debuffs"; more damage
+--        taken from the caster's Cone of Cold (Forever).
+--   Wowhead classic/spell=12579: the same ID on Classic Era, 15 sec, 2% more
+--        critical strike chance against the target per stack.
+--   warcraft.wiki.gg Winter's_Chill: 5 stacks, on both clients.
+-- Only your own: on Forever it helps only your Cone of Cold, and "DoT
+-- Stacking Rule" gives each Mage a debuff of their own. (On Classic Era any
+-- Mage's Winter's Chill helps you; the slot still shows only yours.)
+DDT.CHILL_SPELLS = {
+    chill = {filter = "HARMFUL|PLAYER", ids = {12579}},
+}
+DDT.CHILL_ORDER = {"chill"}
+DDT.CHILL_SPELL = 12579
+DDT.CHILL_MOST = 5
+-- Height: pixels from the plate's bar to the arc's 64 x 16 box; the default
+-- stays 36 (John, 2026-11-23: "Keep the default at 36"), clear of the frozen
+-- arc at the defaults (TESTING.md has the measured gap). Size: percent.
+DDT.CHILL_OFFSET = {min = 0, max = 60, default = 36}
+DDT.CHILL_SIZE = {min = 50, max = 200, default = 100}
+-- One segment's cell, in pixels at 100%: a fifth of the 64-pixel arc.
+DDT.CHILL_CELL = 64 / 5
+-- The game tints the near-white art: blue while empty, white while lit.
+DDT.CHILL_COLORS = {empty = {0.25, 0.5, 1, 0.9}, lit = {1, 1, 1, 1}}
+-- The stacks the preview shows: some segments lit, some empty.
+DDT.CHILL_PREVIEW = 3
+
 -- A set, not a list: the engine matches nothing with a list (the Toolkit's
 -- Procs.lua, from DSU's Shield.lua, found in client).
 local function Set(list)
@@ -154,6 +189,64 @@ local BRAND_LOOK = {width = DDT.BRAND_GLOW, height = DDT.BRAND_GLOW,
         end
     end}
 
+-- Winter's Chill stacks, one segment of an ice arc per stack (John,
+-- 2026-11-23, via the lead: "a 5 part ice-arc above the mob's head, similar
+-- to the effects we do for chilled and frozen, a little higher up, and
+-- segmented into 5 parts instead of discreet balls"; before: "blue
+-- frostballs that turn white as the stack builds"). The arc is 64 x 16 at
+-- 100%, as the frozen and chilled arcs, on their curve; each segment is one
+-- 12.8-pixel fifth (DDT.CHILL_CELL) of it, and no segment's art comes within
+-- 0.75 pixels of a fifth's edge (scripts/make_artwork.py CHILL_CLEAR), so a
+-- crop at that edge cuts no other segment. AddOn code cannot
+-- read the stack count in combat on Forever, so the game lights the segments:
+-- the engine's SetApplicationBar(bar, {minApplications, maxApplications})
+-- sets the bar's range to them, its value to the stacks, and shows it from
+-- minApplications up (Blizzard_CustomAuraButton.lua ApplyApplicationBar;
+-- options in AuraContainerUtilDocumentation.lua; Gethe wow-ui-source
+-- 943764493e6b). The Toolkit's plain-Lua container (Classic Era) does the
+-- same. The whole arc in blue (Textures/ChillArc.tga, tinted); segment 1 is
+-- white (the same art, its first fifth) whenever the debuff shows, so a
+-- stack count of 0 or 1 for one stack both read as one. The bar covers
+-- segments 2 to 5 (range 1 to 5); its fill is Textures/ChillArcFill.tga,
+-- segments 2 to 5 drawn across the whole texture, which the game crops as
+-- the bar fills, and each stack's fill ends between two segments, so whole
+-- segments turn white. A client without SetApplicationBar (or a call that
+-- fails) shows segment 1 only.
+local CHILL_ARC, CHILL_FILL = TEXTURES .. "ChillArc", TEXTURES .. "ChillArcFill"
+local CHILL_LOOK = {width = ARC_WIDTH, height = ARC_HEIGHT,
+    Draw = function(button, holder, _, preview)
+        local cell, colors = DDT.CHILL_CELL, DDT.CHILL_COLORS
+        button:SetPoint("BOTTOM", holder, "BOTTOM", 0, 0)
+        button:SetSize(ARC_WIDTH, ARC_HEIGHT)
+        -- The whole arc, blue: the empty segments.
+        local empty = button:CreateTexture(nil, "BORDER")
+        empty:SetTexture(CHILL_ARC)
+        empty:SetVertexColor(unpack(colors.empty))
+        empty:SetAllPoints(button)
+        -- Segment 1, white: the first fifth of the same art.
+        local first = button:CreateTexture(nil, "ARTWORK")
+        first:SetTexture(CHILL_ARC)
+        first:SetTexCoord(0, 1 / DDT.CHILL_MOST, 0, 1)
+        first:SetVertexColor(unpack(colors.lit))
+        first:SetSize(cell, ARC_HEIGHT)
+        first:SetPoint("LEFT", button, "LEFT", 0, 0)
+        local bar = CreateFrame("StatusBar", nil, button)
+        bar:SetPoint("LEFT", button, "LEFT", cell, 0)
+        bar:SetSize((DDT.CHILL_MOST - 1) * cell, ARC_HEIGHT)
+        bar:EnableMouse(false)
+        bar:SetStatusBarTexture(CHILL_FILL)
+        bar:SetStatusBarColor(unpack(colors.lit))
+        bar:SetMinMaxValues(1, DDT.CHILL_MOST)
+        bar:SetValue(1)
+        holder.bar = bar
+        if preview then
+            bar:SetValue(DDT.CHILL_PREVIEW)
+        elseif not (type(button.SetApplicationBar) == "function" and pcall(button.SetApplicationBar, button, bar,
+                {minApplications = 1, maxApplications = DDT.CHILL_MOST})) then
+            bar:Hide()
+        end
+    end}
+
 -- toolkit: Dyre's Toolkit; store: function() -> the settings ({enabled,
 -- offset, size}), read live; spec: {spells, order, offset, size, look}.
 -- Returns the arcs, else nil and what the client or Toolkit lacks.
@@ -203,9 +296,10 @@ local function CreateArcs(toolkit, store, spec)
         return holder
     end
 
+    -- spec.gate: an extra condition (the Winter's Chill talent); the preview ignores it.
     local function On()
         local settings = store()
-        return type(settings) == "table" and settings.enabled ~= false
+        return type(settings) == "table" and settings.enabled ~= false and (spec.gate == nil or spec.gate())
     end
 
     local function IsHostile(unit)
@@ -291,7 +385,7 @@ local function CreateArcs(toolkit, store, spec)
             for _, key in ipairs(spec.order) do
                 local button = CreateFrame("Frame", nil, preview)
                 button:EnableMouse(false)
-                spec.look.Draw(button, preview, key)
+                spec.look.Draw(button, preview, key, true)
                 preview.arcs[key] = button
             end
             preview:Hide()
@@ -425,16 +519,156 @@ function DDT.CreateFrostArcs(toolkit, store)
         offset = DDT.FROST_OFFSET, size = DDT.FROST_SIZE, look = FROST_LOOK})
 end
 
--- True when this client knows the Demonic Brand debuff (Forever). A static
--- spell lookup: no aura, no talent.
-function DDT.BrandKnown()
+-- True when this client knows the spell. A static spell lookup: no aura, no talent.
+function DDT.SpellKnown(spellID)
     local name
     if type(C_Spell) == "table" and type(C_Spell.GetSpellName) == "function" then
-        name = C_Spell.GetSpellName(DDT.BRAND_SPELL)
+        name = C_Spell.GetSpellName(spellID)
     elseif type(GetSpellInfo) == "function" then
-        name = GetSpellInfo(DDT.BRAND_SPELL)
+        name = GetSpellInfo(spellID)
     end
     return type(name) == "string" and name ~= ""
+end
+
+-- True when this client knows the Demonic Brand debuff (Forever).
+function DDT.BrandKnown()
+    return DDT.SpellKnown(DDT.BRAND_SPELL)
+end
+
+-- True when this client knows the Winter's Chill debuff (both clients).
+function DDT.ChillKnown()
+    return DDT.SpellKnown(DDT.CHILL_SPELL)
+end
+
+-- The Winter's Chill talent (John, 2026-11-23, via the lead: "make sure this
+-- only shows if the player has the talent for it"). Its ranks, by ID:
+--   11180 rank 1: TalentsForeverBook Data.lua (Forever beta build
+--         1.60.1.70755), "Winter's Chill", max 5, node 105763, spell 11180;
+--         classicdb.ch spell=11180 "Rank 1".
+--   28592, 28593, 28594, 28595 ranks 2 to 5: classicdb.ch spell=28592 to
+--         28595, "Winter's Chill" "Rank 2" to "Rank 5" (Classic Era).
+-- Forever lists only 11180 for all five ranks; a Forever ID not listed here
+-- is found by the talent's name (the name of 11180 in this client's language).
+DDT.CHILL_TALENTS = {11180, 28592, 28593, 28594, 28595}
+-- The events that can change the talent, where the client has them
+-- (registered only when valid: a feature test, not a version test).
+DDT.CHILL_TALENT_EVENTS = {"SPELLS_CHANGED", "CHARACTER_POINTS_CHANGED", "PLAYER_TALENT_UPDATE",
+    "TRAIT_CONFIG_UPDATED", "ACTIVE_TALENT_GROUP_CHANGED", "PLAYER_REGEN_ENABLED"}
+local chillTalent = {events = CreateFrame("Frame"), known = nil, pending = false, read = false}
+
+-- Whether this character knows spell id, by the same three APIs and order as
+-- Dyre's Toolkit's Procs.lua KnowsTalent (a local there, so not callable).
+-- Second result: whether any of the three APIs exists.
+local function KnowsSpell(id)
+    local any = false
+    if type(IsPlayerSpell) == "function" then
+        any = true
+        if IsPlayerSpell(id) == true then return true, true end
+    end
+    if type(C_SpellBook) == "table" and type(C_SpellBook.IsSpellKnown) == "function" then
+        any = true
+        if C_SpellBook.IsSpellKnown(id) == true then return true, true end
+    end
+    if type(IsSpellKnown) == "function" then
+        any = true
+        if IsSpellKnown(id) == true then return true, true end
+    end
+    return false, any
+end
+
+-- The spell ID this client gives the talent's name, else nil.
+local function TalentIDByName()
+    local name
+    if type(C_Spell) == "table" and type(C_Spell.GetSpellName) == "function" then
+        name = C_Spell.GetSpellName(DDT.CHILL_TALENTS[1])
+    elseif type(GetSpellInfo) == "function" then
+        name = GetSpellInfo(DDT.CHILL_TALENTS[1])
+    end
+    if type(name) ~= "string" or name == "" or DDT.toolkit and DDT.toolkit.IsSecret(name) then
+        return nil
+    end
+    local id
+    if type(C_Spell) == "table" and type(C_Spell.GetSpellInfo) == "function" then
+        local info = C_Spell.GetSpellInfo(name)
+        id = type(info) == "table" and info.spellID or nil
+    elseif type(GetSpellInfo) == "function" then
+        id = select(7, GetSpellInfo(name))
+    end
+    -- The debuff has the same name: never count it as the talent.
+    if type(id) ~= "number" or id == DDT.CHILL_SPELL then
+        return nil
+    end
+    return id
+end
+
+-- true (known), false (not known), or nil (no API to read it).
+function DDT.ReadChillTalent()
+    local any = false
+    for _, id in ipairs(DDT.CHILL_TALENTS) do
+        local known, api = KnowsSpell(id)
+        if known then return true end
+        any = any or api
+    end
+    if not any then
+        return nil
+    end
+    local id = TalentIDByName()
+    if id and KnowsSpell(id) then
+        return true
+    end
+    return false
+end
+
+-- Whether the arc and the chime may work: known, or not readable (a broken
+-- check never hides them for everyone).
+function DDT.ChillTalentKnown()
+    return chillTalent.known ~= false
+end
+
+-- "known", "not known", or "unreadable", for /ddt debug.
+function DDT.ChillTalentText()
+    if chillTalent.known == nil then return "unreadable" end
+    return chillTalent.known and "known" or "not known"
+end
+
+-- Reads the talent out of combat; in combat keeps the last answer and reads
+-- it again when combat ends. A change refreshes the arc and the chime.
+function DDT.CheckChillTalent()
+    if InCombatLockdown() then
+        chillTalent.pending = true
+        return false
+    end
+    chillTalent.pending = false
+    local known = DDT.ReadChillTalent()
+    local changed = not chillTalent.read or known ~= chillTalent.known
+    chillTalent.known, chillTalent.read = known, true
+    if changed and type(DDT.RefreshChill) == "function" and DDT.db then
+        DDT.RefreshChill()
+    end
+    return changed
+end
+
+chillTalent.events:SetScript("OnEvent", function(_, event)
+    if event == "PLAYER_REGEN_ENABLED" and not chillTalent.pending then
+        return
+    end
+    DDT.CheckChillTalent()
+end)
+
+-- At login, for a Mage, before the arc is made.
+function DDT.StartChillTalent()
+    for _, event in ipairs(DDT.CHILL_TALENT_EVENTS) do
+        local valid = type(C_EventUtils) ~= "table" or type(C_EventUtils.IsEventValid) ~= "function"
+            or C_EventUtils.IsEventValid(event) == true
+        if valid then
+            pcall(chillTalent.events.RegisterEvent, chillTalent.events, event)
+        end
+    end
+    if InCombatLockdown() then
+        chillTalent.pending = true
+    else
+        chillTalent.known, chillTalent.read = DDT.ReadChillTalent(), true
+    end
 end
 
 -- The Warlock's Demonic Brand pentagram; store: function() -> DDT.db.brand.
@@ -444,4 +678,13 @@ function DDT.CreateBrandArcs(toolkit, store)
     end
     return CreateArcs(toolkit, store, {spells = DDT.BRAND_SPELLS, order = DDT.BRAND_ORDER,
         offset = DDT.BRAND_OFFSET, size = DDT.BRAND_SIZE, look = BRAND_LOOK})
+end
+
+-- The Mage's Winter's Chill arc; store: function() -> DDT.db.wintersChill.
+function DDT.CreateChillArcs(toolkit, store)
+    if not DDT.ChillKnown() then
+        return nil, "Winter's Chill (" .. DDT.CHILL_SPELL .. ")"
+    end
+    return CreateArcs(toolkit, store, {spells = DDT.CHILL_SPELLS, order = DDT.CHILL_ORDER,
+        offset = DDT.CHILL_OFFSET, size = DDT.CHILL_SIZE, look = CHILL_LOOK, gate = DDT.ChillTalentKnown})
 end

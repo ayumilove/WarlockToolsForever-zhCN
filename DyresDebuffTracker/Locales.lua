@@ -128,9 +128,10 @@ local zhText = {
         "你的智能诅咒按键（%s）现在施放 Dyre's Debuff Tracker 的智能诅咒。",
     ["/ddt opens the settings; /ddt reset puts the frames back; /ddt reset_focus checks the focus again; "
         .. "/ddt debug shows what the trackers see; /ddt preview brand shows the Demonic Brand pentagram on your "
-        .. "target (Warlocks, WoW: Forever)."] =
+        .. "target (Warlocks, WoW: Forever); /ddt preview chill shows the Winter's Chill arc on your target (Mages)."] =
         "/ddt 打开设置；/ddt reset 恢复框体默认位置；/ddt reset_focus 重新检测焦点；/ddt debug 显示追踪器当前状态；"
-            .. "/ddt preview brand 在目标姓名板上预览 Demonic Brand 五角星（术士，魔兽世界：无限）。",
+            .. "/ddt preview brand 在目标姓名板上预览 Demonic Brand 五角星（术士，魔兽世界：无限）；"
+            .. "/ddt preview chill 在目标姓名板上预览深冬之寒冰弧（法师）。",
     ["Focus check reset for every Dyre's AddOn. The macros try your focus, then the mob under the "
         .. "mouse, then your target, until a focus is seen to work."] =
         "已为所有 Dyre 插件重置焦点检测。宏会依次尝试你的焦点、鼠标指向的怪物、当前目标，直到检测到可用的焦点。",
@@ -214,6 +215,60 @@ local zhText = {
     ["Reset Demonic Brand"] = "重置 Demonic Brand",
     ["Show, Size, and Height back to their defaults: on, %d%%, %d pixels."] =
         "将“显示”“大小”和“高度”恢复默认：开启、%d%%、%d 像素。",
+
+    -- Options: Winter's Chill (Mage)
+    ["Winter's Chill"] = "深冬之寒",
+    [" Needs the Winter's Chill talent (Frost)."] = " 需要天赋“深冬之寒”（冰霜）。",
+    ["A blue ice arc of five segments above an enemy's nameplate while your Winter's Chill is on it: one more "
+        .. "segment turns white with each stack, up to %d, as combo points. Your Frost spells add the stacks."] =
+        "你的深冬之寒在敌人身上时，其姓名板上方显示由五段组成的蓝色冰弧：每叠一层就多一段变白，"
+            .. "最多 %d 层，像连击点一样。你的冰霜法术会叠加层数。",
+    ["The arc's size, in percent: %d to %d."] = "冰弧的大小，以百分比表示：%d 到 %d。",
+    ["How far above the nameplate's health bar the arc sits, in pixels: %d to %d. The default sits above "
+        .. "the frozen and chilled arcs."] =
+        "冰弧位于姓名板生命条上方的高度，单位为像素：%d 到 %d。默认在冰冻与寒冷弧线的上方。",
+    ["Shows the arc on your target's nameplate with no Winter's Chill on it (%d of %d white), so you can "
+        .. "set Size and Height. Press again, or change target, to end it."] =
+        "在目标姓名板上显示冰弧（无需目标身上有深冬之寒，%d/%d 段为白色），方便调整“大小”和“高度”。"
+            .. "再次按下或切换目标即可结束。",
+    ["A note when Winter's Chill goes on your target, and another note as each stack after it goes on "
+        .. "(this client cannot count the stacks, so the notes do not rise). A stack that drops, or the "
+        .. "debuff ending, plays nothing. Another Mage's Winter's Chill on your target may chime too. "
+        .. "Needs Dyre's Sounds."] =
+        "深冬之寒落到你的目标身上时响一个音，之后每叠一层再响一个（此客户端数不出层数，所以音调不会上升）。"
+            .. "掉层或效果结束时不会响。其他法师放在你目标身上的深冬之寒也可能响。需要 Dyre's Sounds。",
+    ["A note as each stack of your Winter's Chill goes on a mob: rising from 1 to 4, and a held high note at 5. "
+        .. "A stack that drops, or the debuff ending, plays nothing. Only your target's stacks chime; another "
+        .. "Mage's Winter's Chill does not. Needs Dyre's Sounds."] =
+        "你的深冬之寒每在怪物身上叠一层响一个音：从 1 到 4 逐层升高，第 5 层是一个延长的高音。"
+            .. "掉层或效果结束时不会响。只对当前目标的层数生效，其他法师的深冬之寒不会响。需要 Dyre's Sounds。",
+    ["Stack chime"] = "层数音阶",
+    ["Note set"] = "音色",
+    ["The chime's instrument, from Dyre's Sounds."] = "音阶使用的乐器音色，来自 Dyre's Sounds。",
+    ["Test chime"] = "试听音阶",
+    ["Plays the chime for stacks 1 to %d, one after another."] = "依次播放第 1 层到第 %d 层的音阶。",
+    ["Reset Winter's Chill"] = "重置深冬之寒",
+    ["Show, Size, Height, and the chime back to their defaults: on, %d%%, %d pixels, chime on, %s."] =
+        "将“显示”“大小”“高度”和音阶恢复默认：开启、%d%%、%d 像素、音阶开启、%s。",
+    ["Bassoon"] = "巴松管",
+    ["Sax"] = "萨克斯",
+
+    -- Core: Winter's Chill
+    ["Copied your Winter's Chill chime settings from Dyre's Buff Reminders. Change them here, under Dyre's "
+        .. "Debuff Tracker, Winter's Chill."] =
+        "已从 Dyre's Buff Reminders 复制你的深冬之寒音阶设置。请在这里的 Dyre's Debuff Tracker → 深冬之寒 下修改。",
+    ["The Winter's Chill arc stays off: this client lacks %s."] = "深冬之寒冰弧保持关闭：此客户端缺少 %s。",
+    ["Winter's Chill preview: on your target's nameplate. Change Size and Height to see them. Press "
+        .. "Preview again, or change target, to end it."] =
+        "深冬之寒预览：已显示在目标姓名板上。调整“大小”和“高度”可实时查看。再次按“预览”或切换目标即可结束。",
+    ["Winter's Chill preview: off."] = "深冬之寒预览：已关闭。",
+    ["Winter's Chill preview: target a mob with its nameplate showing first."] =
+        "深冬之寒预览：请先选中一个姓名板正在显示的怪物。",
+    ["Winter's Chill preview: this client lacks %s."] = "深冬之寒预览：此客户端缺少 %s。",
+    ["Winter's Chill preview: Mages only."] = "深冬之寒预览：仅限法师。",
+    ["Winter's Chill chime: install Dyre's Sounds to hear it."] = "深冬之寒音阶：安装 Dyre's Sounds 后才能听到。",
+    ["The Winter's Chill chime waits: %s %s still plays its own. Update it to %s or later to hear this one."] =
+        "深冬之寒音阶暂不启用：%s %s 仍在播放它自己的音阶。把它更新到 %s 或更高版本，就能听到这里的音阶。",
 
     -- Options: tracker-wide and per-panel rows
     ["%s panel"] = "%s框体",

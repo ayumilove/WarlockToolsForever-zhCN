@@ -1,6 +1,6 @@
 local _, DDT = ...
 
--- Fork (1.5.0-fork.1): warnings shortly before a DoT or Banish ends. The
+-- Fork (1.7.0-fork.1): warnings shortly before a DoT or Banish ends. The
 -- target or focus panel flashes 3 seconds before a DoT you cast runs out, and
 -- the crowd-control bar flashes 3 seconds before your Banish ends, each with
 -- an optional chime. Forever hides enemy auras from AddOn code in combat, so

@@ -1,8 +1,8 @@
 # WoW Forever 术士助手（zhCN 汉化增强版）
 
 魔兽世界：无限（WoW Forever）可用的术士工具插件汉化增强包。基于 Dyre 的
-[WarlockToolsForever](https://github.com/jbedworth/WarlockToolsForever) v1.12.2、
-DyresDebuffTracker v1.5.0 与 DyresToolkit v2.12.0，界面与通报已汉化，
+[WarlockToolsForever](https://github.com/jbedworth/WarlockToolsForever) v1.12.3、
+DyresDebuffTracker v1.7.0 与 DyresToolkit v2.14.1，界面与通报已汉化，
 并增强了灵魂石/治疗石体验与 Debuff 追踪。
 
 非官方汉化版，与原作者无隶属关系；原版功能与代码版权归 Dyre（John Bedworth），
@@ -20,18 +20,23 @@ MIT 许可，各插件目录内附原始 LICENSE。
 
 | 文件夹 | 版本 | 说明 |
 | --- | --- | --- |
-| `WarlockToolsForever/` | 1.12.2-fork.1 | 汉化增强版：碎片管理（含右键裁剪）、石头按钮、团队通报 |
-| `DyresToolkit/` | 2.12.0-fork.1 | **必需依赖**：汉化；追踪条悬停金色连线 |
-| `DyresDebuffTracker/` | 1.5.0-fork.1 | **必需依赖**：汉化；DoT/放逐快结束提醒（可选铃声） |
-| `DyresShieldsUp/` | 1.5.0 | 可选：护盾剩余量新月条；未改动 |
-| `DyresBuffReminders/` | 1.13.1 | 可选：职业增益提醒、冷却与触发提示；未改动 |
+| `WarlockToolsForever/` | 1.12.3-fork.1 | 汉化增强版：碎片管理（含右键裁剪）、石头按钮、团队通报 |
+| `DyresToolkit/` | 2.14.1-fork.1 | **必需依赖**：汉化；追踪条悬停金色连线 |
+| `DyresDebuffTracker/` | 1.7.0-fork.1 | **必需依赖**：汉化；DoT/放逐快结束提醒、法师深冬之寒冰弧 |
+| `DyresShieldsUp/` | 1.5.2 | 可选：护盾剩余量新月条；未改动 |
+| `DyresBuffReminders/` | 1.13.3 | 可选：职业增益提醒、冷却与触发提示；未改动 |
+
+法师的深冬之寒层数“音阶”提示需要 **Dyre's Sounds**（`DyresSounds`）。
+它没有打包在本仓库里（音效文件较大），请从 CurseForge 安装；
+不装也不影响冰弧，只是听不到声音。
 
 ## 安装
 
 1. 下载本仓库（Code → Download ZIP）。
 2. 把上面五个文件夹整个放进：
    `World of Warcraft/_forever_/Interface/AddOns/`
-3. 进入游戏，或输入 `/reload`。插件列表里确认五个插件都已启用。
+3. 进游戏，或输入 `/reload`。插件列表里确认五个插件都已启用。
+4. 想要深冬之寒音阶时，再从 CurseForge 安装 Dyre's Sounds 并启用。
 
 `DyresToolkit` 与 `DyresDebuffTracker` 必须保留；另外两个 Dyre 插件只在你想要
 对应功能时装。
@@ -44,7 +49,7 @@ MIT 许可，各插件目录内附原始 LICENSE。
 - 宏名（`! Healthstone` 等）、斜杠命令与调试输出保持英文，便于脚本引用。
 - 中文文案为魔女口吻，不含插件署名。
 
-增强（`X-WTF-Fork: 1.12.2-fork.1`）：
+增强（`X-WTF-Fork: 1.12.3-fork.1`）：
 
 - **给自己绑灵魂石不再通报**，也不再提示“你的灵魂石已结束”；`/wtf stones`
   仍可查看自己灵魂石的剩余时间。不会再覆盖已给其他玩家的灵魂石记录。
@@ -59,13 +64,14 @@ MIT 许可，各插件目录内附原始 LICENSE。
   用上这块治疗石”。
 - **碎片计数器右键裁剪**：一键删除超出上限的灵魂碎片；副本内被游戏拒绝时
   改为离开副本后补删（上游 1.12 功能，已汉化）。
-- 1.12.2 上游功能全部保留。
+- 1.12.3 上游功能全部保留：登录欢迎语改由 DyresToolkit 统一管理
+  （Toolkit 设置页“登录时显示欢迎语”，一处关掉对所有 Dyre 插件生效）。
 
 ## DyresDebuffTracker / DyresToolkit 汉化
 
 - 与 WTF 同一套 `Locales.lua` → `DDT.T()` / `ns.T()` 查表方案，
   `GetLocale() == "zhCN"` 时生效；缺词条回落英文。
-- DDT 199 条、Toolkit 323 条中文词条，0 缺失；设置页、追踪条、控制条、
+- DDT 224 条、Toolkit 325 条中文词条，0 缺失；设置页、追踪条、控制条、
   姓名板文案、`/ddt` 命令提示均已覆盖。
 - 法术名保持客户端原文（`ClassData` 的 label），在显示时再翻译，
   确保与 Forever 中文客户端的法术名一致。
@@ -88,6 +94,26 @@ MIT 许可，各插件目录内附原始 LICENSE。
 追踪条“目标/焦点”标签、点名字选怪、悬停金线、追踪条本地化）已随功能一起
 移到 DyresDebuffTracker，并在本仓库的 DDT 中汉化、补回提醒与金线。
 
+## 上游新功能（1.7.0 / 2.14.1）
+
+- **法师：深冬之寒冰弧**（DDT 1.7.0，需冰霜天赋“深冬之寒”）：目标姓名板上方
+  出现五段蓝色冰弧，每层深冬之寒点亮一段，像盗贼连击点。你的冰霜法术叠层。
+  设置：DDT 设置 → 持续伤害页“深冬之寒”（显示、大小、位置、预览、重置）。
+  只有法师角色才显示这一节。
+- **深冬之寒层数音阶**（DDT 1.7.0）：每层响一声音符，第 5 层为收束音；
+  音色可选巴松管或萨克斯，可试听。只在“你的目标”身上、且是你自己挂的
+  深冬之寒时响。需要 Dyre's Sounds。
+  - Classic Era 通过战斗日志逐层计数；Forever 客户端禁止战斗日志，改用
+    游戏自带的施法光环音效（目标、固定音符），因此不能在 Forever 上逐层
+    升调，别的法师给你的目标挂深冬之寒也可能响（作者已接受此限制）。
+- **音阶设置迁移**：DDT 1.7.0 会从 Dyre's Buff Reminders 读取你原来的
+  深冬之寒音阶设置（一次），旧版 DBR 仍自带音阶时 DDT 自动等待不重复响。
+- **登录欢迎语开关**（Toolkit 2.14.1）：Toolkit 设置页“登录时显示欢迎语”，
+  关掉后所有 Dyre 插件登录时都不再报名字和版本；错误与问题照常显示。
+- **追踪条分栏设置**（Toolkit 2.14.1）：每个追踪面板可单独调整生命条、
+  生命文字、边框、描边宽度与尺寸（设置页“持续伤害”下各面板的选项）。
+- 以上新功能均已汉化。
+
 ## 更新与兼容
 
 - 客户端：Forever（Interface 16001），简体中文客户端。
@@ -95,9 +121,15 @@ MIT 许可，各插件目录内附原始 LICENSE。
   `X-DTK-Fork` 标记本版本，避免被当成新版本反复覆盖。
 - **不要用 CurseForge 更新这三个插件**，会覆盖回英文原版。
   上游发新版时，以新上游为准重新合并汉化。
-- `DyresShieldsUp`、`DyresBuffReminders` 未改动，可以照常通过 CurseForge 更新。
+- `DyresShieldsUp`、`DyresBuffReminders` 未改动，可以照常通过 CurseForge 更新；
+  但请保持 DBR 1.13.3 或更新：1.13.3 起 DBR 把深冬之寒音阶交给 DDT，
+  旧版在 Forever 上可能和 DDT 同时响（Classic Era 战斗日志路径上 DDT
+  会自动等待旧版 DBR，不重复响）。
+- `DyresDebuffTracker`（以及 `DyresShieldsUp`）的 TOC 里把 `DyresSounds`
+  列为可选依赖，没有它也能正常加载。
 - SavedVariables 不受覆盖影响，配置不会丢失；1.11.0 起旧的追踪/控制设置
-  由 DDT 一次性读取，WTF 只原样保留、不修改。
+  由 DDT 一次性读取，WTF 只原样保留、不修改。深冬之寒音阶设置从 DBR
+  读取一次后归 DDT 管理。
 
 ## 许可
 

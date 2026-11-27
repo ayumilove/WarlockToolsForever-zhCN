@@ -185,14 +185,22 @@ end
 
 -- /dyre, and /dyretoolkit in case another AddOn uses /dyre.
 local USAGE = ns.T("Use /dyre (settings), /dyre unlock, /dyre lock, /dyre grid, /dyre snap, /dyre minimap, "
-    .. "/dyre debug, /dyre pull [seconds], /dyre tank_reset, /dyre tank_debug, or /dyre debug_threat.")
+    .. "or /dyre debug.")
+-- The threat, tank, and swing words moved to Dyre's Threat and Combat Tools
+-- in 2.16.0 (John, 2026-11-26). Its own command is /dct.
+ns.MOVED_WORDS = {pull = true, tank_reset = true, tank_debug = true, debug_threat = true, debug_taunts = true,
+    debug_dots = true, threat_debug = true, taunt_debug = true, swing_reset = true, debug_swing = true}
+ns.MOVED = ns.T("The threat labels, tank tools, and swing timer are now in Dyre's Threat and Combat Tools: "
+    .. "install it from CurseForge, then use /dct.")
 
 function ns.HandleCommand(message)
-    -- The tank and threat words (Tank.lua), some with an argument.
-    if ns.HandleTankCommand and ns.HandleTankCommand(message) then
+    local command = type(message) == "string" and message:match("^%s*(%S*)")
+    command = command and command:lower()
+    if command and ns.MOVED_WORDS[command] then
+        ns.Report(ns.MOVED)
         return
     end
-    local command = type(message) == "string" and message:match("^%s*(%S*)%s*$")
+    command = type(message) == "string" and message:match("^%s*(%S*)%s*$")
     command = command and command:lower()
     if command == "" then
         DyresToolkit.OpenSettings()
@@ -244,8 +252,13 @@ events:SetScript("OnEvent", function(self, event, name)
     self:UnregisterEvent("PLAYER_LOGIN")
     ns.InitializeSettings()
     ns.InitializeMinimap()
-    -- Group warnings and tank tools (2.9.0), after the toolkit's own settings.
-    if ns.InitializeTank then
-        ns.InitializeTank()
-    end
+    -- The toolkit page's end: the link to Dyre's Threat and Combat Tools
+    -- (where its sections were before 2.16.0), then the Profile section.
+    local category, layout = ns.HomeCategory()
+    DyresToolkit.AddSettingsLink(category, layout, {addon = "DyresCombatTools",
+        name = ns.T("Threat, tank tools, and swing timer"), button = ns.T("Open"),
+        tooltip = ns.T("Dyre's Threat and Combat Tools: threat labels and sounds, tank tools, and the swing "
+            .. "timer."),
+        missing = ns.T("These are now in Dyre's Threat and Combat Tools: install it from CurseForge.")})
+    ns.AddProfileSettings(category, layout)
 end)

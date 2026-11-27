@@ -29,8 +29,8 @@ local enUS = {
     announcePage = {
         title = "Announce",
         help = "%T is the target's full name and %Z your zone. Press Enter to keep an edit, Escape to undo it. "
-            .. "Nothing is sent for yourself or for a cast that fails. The Fear and Banish announcements moved "
-            .. "to Dyre's Debuff Tracker (the Control page).",
+            .. "Nothing is sent for yourself or for a cast that fails. The Fear and Banish announcements are on "
+            .. "the Control page, in Dyre's Debuff Tracker.",
         channelLabel = "Group messages go to",
         channelGroup = "Raid or party (nothing when alone)",
         channelSay = "Say (the game may block it outdoors)",
@@ -79,7 +79,7 @@ local zhCN = {
     announcePage = {
         title = "通报",
         help = "%T 是目标的全名，%Z 是你的区域。按回车保存修改，按 Esc 撤销。对自己施放或施放失败时不会发送任何"
-            .. "消息。恐惧与放逐的通报已移到 Dyre's Debuff Tracker（控制页）。",
+            .. "消息。恐惧与放逐的通报在 Dyre's Debuff Tracker 的控制页。",
         channelLabel = "团队消息发送到",
         channelGroup = "团队或小队（单人时不发送）",
         channelSay = "说（野外可能被系统拦截）",
@@ -658,6 +658,83 @@ local zhText = {
     ["Square"] = "方形",
     ["Cross"] = "十字",
     ["Skull"] = "骷髅",
+    -- WTF 1.14.0: moved sections with primers, short tooltips, the Stones layout
+    ["Enable %s in the AddOn list for %s."] = "请在插件列表中启用 %s，以使用%s。",
+    ["Dyre's Debuff Tracker adds the DoT tracker here: your DoTs and time left on every mob. "
+        .. "A block on the health bar shows the damage your DoTs will still deal, and DIES when that is "
+        .. "enough to kill. Also the smart curse, with its macro and key binding. Install Dyre's Debuff "
+        .. "Tracker from CurseForge."] =
+        "Dyre's Debuff Tracker 会在这里加入持续伤害追踪：每个怪物身上的持续伤害及剩余时间。血条上的方块显示"
+            .. "你的持续伤害还会造成的伤害，足以致命时显示 DIES。还有智能诅咒及其宏与按键。请从 CurseForge 安装 "
+            .. "Dyre's Debuff Tracker。",
+    ["Dyre's Debuff Tracker adds the DoT settings here: the color of each DoT on the bars, the "
+        .. "order of your DoTs, and DoT dots on enemy nameplates, so you see which mobs still need a DoT. "
+        .. "Install Dyre's Debuff Tracker from CurseForge."] =
+        "Dyre's Debuff Tracker 会在这里加入持续伤害设置：计时条上每种持续伤害的颜色、持续伤害的顺序，以及敌人"
+            .. "姓名板上的持续伤害圆点，让你看出哪些怪物还需要补持续伤害。请从 CurseForge 安装 Dyre's Debuff Tracker。",
+    ["Dyre's Debuff Tracker adds the Control bar here: Fear and Banish timers, a Focus box, "
+        .. "Fear timers under nameplates, the \"! Fear\", \"! Banish\", and \"! Seduction\" macros, and "
+        .. "messages to your group for Fear, Banish, Enslave Demon, and Howl of Terror. Install Dyre's Debuff "
+        .. "Tracker from CurseForge."] =
+        "Dyre's Debuff Tracker 会在这里加入控制条：恐惧与放逐计时、焦点框、姓名板下的恐惧计时、“! Fear”"
+            .. "“! Banish”“! Seduction”宏，以及向队伍通报恐惧、放逐、奴役恶魔和恐惧嚎叫。请从 CurseForge 安装 "
+            .. "Dyre's Debuff Tracker。",
+    ["Dyre's Shields Up adds the shield display here: a crescent that shows how much your Shadow "
+        .. "Ward or your Voidwalker's Sacrifice can still absorb, and any other shield on you. Install "
+        .. "Dyre's Shields Up from CurseForge."] =
+        "Dyre's Shields Up 会在这里加入护盾显示：一道新月形，显示你的暗影结界或虚空行者的牺牲还能吸收多少伤害，"
+            .. "以及你身上的其他护盾。请从 CurseForge 安装 Dyre's Shields Up。",
+    ["Dyre's Buff Reminders adds the cooldown chimes here: a sound just before your chosen spells, "
+        .. "such as Death Coil, are ready again, so you can act the moment they are, also in combat. "
+        .. "Install Dyre's Buff Reminders from CurseForge."] =
+        "Dyre's Buff Reminders 会在这里加入冷却提示音：在你选定的法术（如死亡缠绕）就绪前播放声音，让你在就绪的"
+            .. "瞬间行动，战斗中同样有效。请从 CurseForge 安装 Dyre's Buff Reminders。",
+    ["Dyre's Buff Reminders adds your procs here: a sound and arcs on screen when Nightfall makes "
+        .. "your next Shadow Bolt instant, or when Decimation procs. Install Dyre's Buff Reminders from "
+        .. "CurseForge."] =
+        "Dyre's Buff Reminders 会在这里加入你的触发：夜幕使你的下一个暗影箭瞬发，或灭杀触发时，播放声音并在屏幕上"
+            .. "显示弧线。请从 CurseForge 安装 Dyre's Buff Reminders。",
+    ["Dyre's Debuff Tracker adds a red pentagram above an enemy's nameplate while your Demonic "
+        .. "Brand is on it, so you know when to recast it. Install Dyre's Debuff Tracker from "
+        .. "CurseForge."] =
+        "只要你的 Demonic Brand 还在敌人身上，Dyre's Debuff Tracker 就会在它的姓名板上方显示红色五角星，让你知道"
+            .. "何时重新施放。请从 CurseForge 安装 Dyre's Debuff Tracker。",
+    ["Dyre's Buff Reminders adds your reminders here: an icon when Demon Armor is missing (a click "
+        .. "casts it), a warning when you have no demon out, and one when your Voidwalker's Torment is on "
+        .. "autocast in a group you don't tank. Install Dyre's Buff Reminders from CurseForge."] =
+        "Dyre's Buff Reminders 会在这里加入你的提醒：缺少恶魔护甲时显示图标（点击施放），没有恶魔在场时警告，"
+            .. "以及你不抗怪的小队中虚空行者的折磨开启了自动施放时警告。请从 CurseForge 安装 Dyre's Buff Reminders。",
+    ["Chimes"] = "提示音",
+    ["Procs"] = "触发",
+    ["Reminders"] = "提醒",
+    ["Debuff Cues"] = "减益提示",
+    ["No AddOn shows %s arcs now."] = "现在没有插件显示%s弧线。",
+    ["Opens %s settings for the %s arcs and sound."] = "打开%s的设置，调整%s弧线与音效。",
+    ["No Dyre's AddOn shows %s arcs now."] = "现在没有 Dyre 插件显示%s弧线。",
+    ["Opens %s settings for %s."] = "打开%s的设置，调整%s。",
+    ["%s (in %s)"] = "%s（位于%s）",
+    ["How many Soul Shards to keep in your bags."] = "背包中保留的灵魂碎片数量。",
+    ["A Soul Shard icon with your shard count: red when low, green at your limit."] =
+        "一枚灵魂碎片图标和你的碎片数量：低于警告值时变红，达到上限时变绿。",
+    ["How big the shard counter is, in percent."] = "碎片计数器的大小，以百分比表示。",
+    ["The bar with the Soulstone and Healthstone buttons."] = "带有灵魂石和治疗石按钮的栏。",
+    ["How big the Stones bar is, in percent."] = "石头栏的大小，以百分比表示。",
+    ["Lay the Stones buttons out in a row or a column."] = "石头按钮排成一行或一列。",
+    ["Keep the \"! Healthstone\" and \"! Soulstone\" macros for your action bars: left-click uses your "
+        .. "best stone, right-click creates one. Turning this off deletes them."] =
+        "把“! Healthstone”和“! Soulstone”保留在动作条可用的角色宏中：左键使用最好的石头，右键制造一块。"
+            .. "关闭此选项会删除它们。",
+    ["Say in chat when your Soulstone ends or none is up."] = "当你的灵魂石结束或当前没有灵魂石时在聊天中提醒。",
+    ["Say in chat when you carry no Healthstone."] = "当你没有携带治疗石时在聊天中提醒。",
+    ["Say in chat when you carry no Spellstone."] = "当你没有携带法术石时在聊天中提醒。",
+    ["Say in chat when you carry no Firestone."] = "当你没有携带火焰石时在聊天中提醒。",
+    ["Outline the Stones bar and the shard counter, so you can drag them."] =
+        "为石头栏和碎片计数器显示轮廓，以便拖动。",
+    ["%T is the target's full name and %Z your zone. Press Enter to keep an edit, Escape to undo it. "
+        .. "Nothing is sent for yourself or for a cast that fails. The Fear and Banish announcements are on "
+        .. "the Control page, in Dyre's Debuff Tracker."] =
+        "%T 是目标的全名，%Z 是你的区域。按回车保存修改，按 Esc 撤销。对自己施放或施放失败时不会发送任何消息。"
+            .. "恐惧与放逐的通报在 Dyre's Debuff Tracker 的控制页。",
 }
 
 -- The client's own spell name, so a spell reads as the game names it (zhCN

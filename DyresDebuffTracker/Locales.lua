@@ -431,6 +431,128 @@ local zhText = {
     ["The crowd-control bar flashes shortly before your Banish ends. It counts from your cast, "
         .. "so an early break can make it wrong."] =
         "放逐快结束时，控制条会提前闪烁。时间按你的施法推算，提前解除时可能不准。",
+
+    -- Options 1.8.0: sections, titles, and the shortened tooltips
+    ["target"] = "目标",
+    ["focus"] = "焦点",
+    ["list"] = "其他",
+    ["DoT Tracker"] = "持续伤害追踪",
+    ["Crowd Control"] = "控制",
+    ["Debuff Cues"] = "减益提示",
+    ["Dyre's Debuff Tracker has nothing for your class."] = "Dyre's Debuff Tracker 对你的职业没有可用内容。",
+    ["The room for the mob's name beside the icons."] = "图标旁留给怪物名字的空间。",
+    ["Shift casts Weakness, Ctrl Tongues, Alt Recklessness."] =
+        "Shift 施放虚弱诅咒，Ctrl 施放语言诅咒，Alt 施放鲁莽诅咒。",
+    ["%s shows these for you now, so these settings are greyed. Turn that feature off in %s to use these."] =
+        "现在由%s为你显示这些，因此这些设置已变灰。关闭%s中的该功能后即可在这里设置。",
+    ["Shows an ice arc above each enemy nameplate while the mob is Frozen, and a thin frost arc while your "
+        .. "Chill is on it."] =
+        "怪物处于冰冻状态时，在每个敌对姓名板上方显示一圈冰弧；你的寒冷效果在它身上时，显示一圈淡淡的霜弧。",
+    ["How far above the nameplate the arcs sit."] = "弧线位于姓名板上方的高度。",
+    ["The size of the arcs."] = "弧线的大小。",
+    [" Greyed out: you have not learned %s yet."] = " 已变灰：你尚未学会%s。",
+    ["Shows a five-part ice arc above an enemy's nameplate, one part turning white for each stack of your "
+        .. "Winter's Chill."] =
+        "在敌对姓名板上方显示由五段组成的冰弧，你的深冬之寒每叠一层就多一段变白。",
+    ["The size of the arc."] = "冰弧的大小。",
+    ["How far above the nameplate the arc sits."] = "冰弧位于姓名板上方的高度。",
+    ["Preview Winter's Chill"] = "预览深冬之寒",
+    ["Shows the arc on your target's nameplate so you can set its size and height. Press again to hide it."] =
+        "在目标姓名板上显示冰弧，方便调整大小和高度。再次按下即可隐藏。",
+    ["Plays a note when Winter's Chill goes on your target and as each stack is added. Needs Dyre's Sounds."] =
+        "深冬之寒落到你的目标身上时响一个音，之后每叠一层再响一个。需要 Dyre's Sounds。",
+    ["Plays a rising note as each stack of your Winter's Chill goes on your target. Needs Dyre's Sounds."] =
+        "你的深冬之寒每在目标身上叠一层，就响一个升高的音。需要 Dyre's Sounds。",
+    ["The instrument the chime plays."] = "音阶使用的乐器音色。",
+    ["Test the stack chime"] = "试听层数音阶",
+    ["Test"] = "试听",
+    ["Plays the chime for stacks 1 to %d."] = "依次播放第 1 层到第 %d 层的音阶。",
+    ["Reset"] = "重置",
+    ["Puts the Winter's Chill settings back to their defaults."] = "将深冬之寒的设置恢复默认。",
+    ["Demonic Brand"] = "Demonic Brand",
+    ["Shows a glowing red pentagram above an enemy's nameplate while your Demonic Brand is on it."] =
+        "你的 Demonic Brand 在敌人身上时，在其姓名板上方显示发光的红色五角星。",
+    ["The size of the pentagram."] = "五角星的大小。",
+    ["How far above the nameplate the pentagram sits."] = "五角星位于姓名板上方的高度。",
+    ["Preview Demonic Brand"] = "预览 Demonic Brand",
+    ["Shows the pentagram on your target's nameplate so you can set its size and height. Press again to "
+        .. "hide it."] = "在目标姓名板上显示五角星，方便调整大小和高度。再次按下即可隐藏。",
+    ["Puts the Demonic Brand settings back to their defaults."] = "将 Demonic Brand 的设置恢复默认。",
+    ["Shows the panel for the other mobs you DoT."] = "显示其他被你施加持续伤害的怪物。",
+    ["Shows the panel for your %s's DoTs."] = "显示你的%s框体的持续伤害。",
+    ["Turns the line with the mob's name into its health bar."] = "把怪物名字那一行变成它的生命条。",
+    ["Shows the mob's health after its name, as a number, a percent, or both."] =
+        "在怪物名字后显示生命值：数字、百分比或两者。",
+    ["Shows the background and border behind each mob's name and DoTs."] =
+        "显示每只怪物名字和持续伤害后面的背景与边框。",
+    ["The width of the colored outline around the %s panel; 0 hides it."] =
+        "%s框体外圈的彩色描边宽度；0 表示不显示。",
+    ["Whether new DoTs and new mobs are added above or below the first one."] =
+        "新的持续伤害和新怪物加在第一条的上方还是下方。",
+    ["Whether new DoTs are added above or below the first one."] = "新的持续伤害加在第一条的上方还是下方。",
+    ["The length of this panel's DoT bars, or the size of its icons in the Compact look."] =
+        "此框体持续伤害条的长度，或紧凑外观下图标的大小。",
+    ["The color of the other mobs' row borders and health bars."] = "其他怪物行的边框和生命条的颜色。",
+    ["The color of the %s panel's outline and health bar."] = "%s框体描边和生命条的颜色。",
+    ["How solid the %s panel is."] = "%s框体的不透明度。",
+    ["Puts this panel's settings back to their defaults."] = "将此框体的设置恢复默认。",
+    ["Shows timer bars for your DoTs on your target, your focus, and other mobs."] =
+        "在你的目标、焦点和其他怪物身上显示持续伤害计时条。",
+    ["Enable DoT tracker"] = "启用持续伤害追踪",
+    ["Compact shows an icon per DoT; Bars shows a timer bar per DoT."] =
+        "紧凑：每个持续伤害一个图标；条形：每个持续伤害一条计时条。",
+    ["The length of the DoT bars, or the size of the icons in the Compact look."] =
+        "持续伤害条的长度，或紧凑外观下图标的大小。",
+    ["Puts this look's sizes and name position back to their defaults."] =
+        "恢复所选外观的大小和名字位置默认值。",
+    ["Shows a DoT only while it is on the mob. A click on the target or focus row then recasts nothing."] =
+        "只在持续伤害存在于怪物身上时显示。此时点击目标或焦点行不会补放持续伤害。",
+    ["The width of the colored outline around the %s and %s panels; 0 hides it."] =
+        "%s和%s框体外圈的彩色描边宽度；0 表示不显示。",
+    ["What a click on the Curse slot casts: the curse you cast last, or the best curse for that mob. %s"] =
+        "点击诅咒栏位时施放的诅咒：上次施放的诅咒，或对该怪物最合适的诅咒。%s",
+    ["Shows a letter on the Curse slot for that mob's best curse: T Tongues, E Elements, W Weakness."] =
+        "在诅咒栏位上显示该怪物最合适诅咒的字母：T 语言、E 元素、W 虚弱。",
+    ["Keep the \"! Curse\" macro"] = "保留“! Curse”宏",
+    ["Keeps a \"! Curse\" macro that casts the smart curse. Off deletes it."] =
+        "保留用于施放智能诅咒的“! Curse”宏。关闭会删除它。",
+    ["Shows a striped block on the mob's health bar for the damage your DoTs still have to deal."] =
+        "在怪物生命条上显示条纹区块，表示你的持续伤害还将造成的伤害。",
+    ["Shows the block on enemy nameplates too."] = "在敌对姓名板上也显示该区块。",
+    ["Shows a red skull and DIES when your DoTs will kill the mob."] =
+        "你的持续伤害足以击杀怪物时，显示红色骷髅和“死亡”。",
+    ["How the block is drawn: stripes, one solid color, or the texture of the bar it sits on."] =
+        "区块的画法：条纹、单一纯色，或所在生命条的材质。",
+    ["Draws a thin line around the block."] = "在区块周围画一圈细线。",
+    ["Where DIES shows on %s."] = "“死亡”在%s上的显示位置。",
+    ["Moves DIES left or right on %s."] = "以像素为单位左右移动%s上的“死亡”。",
+    ["Moves DIES down or up on %s."] = "以像素为单位上下移动%s上的“死亡”。",
+    ["Shows a dot above each enemy nameplate for each of your DoTs, lit while it is up."] =
+        "在每个敌对姓名板上方为你施加的每个持续伤害显示一个圆点，存在时点亮。",
+    ["How far above the nameplate the dots sit."] = "圆点位于姓名板上方的高度。",
+    ["How solid the nameplate dots are."] = "姓名板上方圆点的不透明度。",
+    ["The DoT in place %d on each row; picking another swaps the two."] =
+        "每一行第 %d 格的持续伤害；选择另一个会互换位置。",
+    ["The color of %s on the tracker's bars and nameplate dots."] = "%s在追踪器条形和姓名板圆点上的颜色。",
+    ["Shows a %s dot above nameplates."] = "在姓名板上方显示%s圆点。",
+    ["Puts the DoTs' order and colors back to their defaults."] = "将持续伤害的顺序和颜色恢复默认。",
+    [" Off also stops the group messages and removes the \"!\" macros from your action bars."] =
+        " 关闭后还会停止团队通报，并从动作条移除“!”宏。",
+    ["Shows a bar for each mob you control with its time left."] = "为你控制的每只怪物显示一条计时栏。",
+    ["Enable crowd control"] = "启用控制",
+    ["Keeps a macro for each crowd-control spell you know (\"! Fear\", \"! Polymorph\", ...) that "
+        .. "marks and casts on the mob under your mouse. Off deletes them."] =
+        "为你掌握的每个控制法术保留一个宏（“! Fear”“! Polymorph”等），标记并施放鼠标指向的怪物。"
+            .. "关闭会删除这些宏。",
+    ["Shows a thin bar under each controlled mob's nameplate with its time left."] =
+        "在每只受控怪物的姓名板下方显示一条细计时栏。",
+    ["The raid marker the macro puts on your %s target."] = "宏会放在你%s目标上的团队标记。",
+    ["Tells your party or raid as you cast it: %s"] = "施放时通知小队或团队：%s",
+    ["Sends the messages to Say instead, also when you are alone."] = "消息改发到“说”频道，单人时也发送。",
+    ["%s shows your DoTs and crowd control now. Turn it off, or update it, to use Dyre's Debuff Tracker for "
+        .. "them."] = "%s现在为你显示持续伤害和控制。关闭它或更新它，才能让 Dyre's Debuff Tracker 接管。",
+    ["DoTs, crowd control, and debuff cues for your class; each has its own page below."] =
+        "为你的职业提供持续伤害、控制与减益提示；每项各有单独页面。",
 }
 
 function DDT.T(text, context)

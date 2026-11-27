@@ -105,6 +105,14 @@ local GROUP_SPELL_AT = 2
 -- Aura changes come in bursts (a group buff lands on five people at once):
 -- one refresh this long after the first covers each burst.
 local REFRESH_DELAY = 0.2
+-- A group, role, or zone change is checked again this many seconds later
+-- (John, 2026-11-25, as Dyre's Toolkit's pet taunt fix: "Yes, both"; found
+-- in client in the toolkit: the first check came before the group, role, or
+-- pet bar data was ready, and nothing fired again while autocast stayed on).
+-- One timer; a newer event makes the waiting one do nothing.
+local RECHECK_DELAY = 2
+local RECHECK_EVENTS = {GROUP_ROSTER_UPDATE = true, PLAYER_ROLES_ASSIGNED = true, ROLE_CHANGED_INFORM = true,
+    PLAYER_ENTERING_WORLD = true}
 -- A timer can fire a hair early; this much past the lead time still counts.
 local TIMER_SLACK = 0.05
 -- AddOn restrictions that hide auras out of combat (found in client, 1.13.2:
@@ -160,8 +168,30 @@ function DBR.NeededDefault(reminder)
     return reminder.combatWindow == true
 end
 
+-- "Show only in combat" (db.combatOnly[key], default off; John, 2026-11-26),
+-- for a short buff (combatWindow: Battle Shout). On, out of combat nothing of
+-- it shows (our icon, the game's slot, the running-out border), missing or
+-- not; in combat it shows as before. The icon's driver lets the game show it
+-- when combat starts; the slot and the border are alpha only, set at
+-- combat's edges.
+function DBR.CanShowOnlyInCombat(reminder)
+    return reminder.combatWindow == true and DBR.CanShowOnlyWhenNeeded(reminder)
+end
+
 local reminders = {list = {}, icons = {}, names = {}, spellKeys = {}, spellNames = {}, widgets = {},
-    seen = {}, windows = {}, faded = {}, warns = {}, timed = {}, casts = {}, upNames = {}, travelNames = {}, speedNames = {}}
+    seen = {}, windows = {}, faded = {}, warns = {}, warnOn = {}, combatOnly = {}, timed = {}, casts = {}, upNames = {},
+    travelNames = {}, speedNames = {}}
+
+-- Whether a buff hides out of combat ("Show only in combat"), while locked.
+local function CombatOnly(reminder)
+    return DBR.CanShowOnlyInCombat(reminder) and DBR.db.locked and DBR.db.combatOnly[reminder.key] == true
+        or false
+end
+
+-- In combat: also during PLAYER_REGEN_DISABLED, before the lockdown starts.
+local function InCombat()
+    return reminders.combat or InCombatLockdown()
+end
 
 -- The default row a reminder starts in: the upper for any buff that can go on
 -- another player (Buffs.lua's group or others), the lower for self-only ones.
@@ -302,6 +332,8 @@ function DBR.SanitizeReminders(db, sanitizePosition)
     local needed = type(db.needed) == "table" and db.needed or {}
     local longOff = db.neededLongOff ~= true
     db.needed = {}
+    local combatOnly = type(db.combatOnly) == "table" and db.combatOnly or {}
+    db.combatOnly = {}
     db.neededLongOff = true
     -- 1.11.0 saved its default, 15, for everyone: once, 15 becomes 0, the
     -- new default (a 15 chosen by hand too; 25 stays).
@@ -362,6 +394,9 @@ function DBR.SanitizeReminders(db, sanitizePosition)
                     value = DBR.NeededDefault(reminder)
                 end
                 db.needed[key] = value
+            end
+            if DBR.CanShowOnlyInCombat(reminder) then
+                db.combatOnly[key] = combatOnly[key] == true
             end
             if reminder.lead then
                 db.leads[key] = DBR.SanitizeBuffLead(reminder, leads[key])
@@ -952,6 +987,11 @@ local function SetWarn(key, on)
     if not warn then
         return
     end
+    reminders.warnOn[key] = on or nil
+    -- Kept for combat's start (CombatOnlyEdge), not shown before it.
+    if on and reminders.combatOnly[key] and not InCombat() then
+        on = false
+    end
     if on then
         warn:SetAlpha(1)
         if not warn.flash:IsPlaying() then
@@ -1105,6 +1145,9 @@ local function SetSlotAlpha(holder, alpha)
 end
 
 local function SlotAlpha(reminder)
+    if CombatOnly(reminder) and not InCombat() then
+        return 0
+    end
     return Windowed(reminder) and FaintAlpha() or 1
 end
 
@@ -1350,11 +1393,15 @@ function DBR.RefreshReminders()
         local holder = reminders.widgets[reminder.key]
         holder:SetShown(countable)
         local windowed = Windowed(reminder)
+        local combatOnly = CombatOnly(reminder)
+        reminders.combatOnly[reminder.key] = combatOnly or nil
         SetSlotAlpha(holder, SlotAlpha(reminder))
         -- Up and not needed, out of combat: "Visibility when not needed";
         -- at 0 hidden (no clicks), else shown at that alpha.
         local faint = windowed and FaintAlpha() or 1
-        local upDriver = faint > 0 and SHOWN_DRIVER or COMBAT_ONLY_DRIVER
+        local upDriver = faint > 0 and not combatOnly and SHOWN_DRIVER or COMBAT_ONLY_DRIVER
+        -- Missing or running out: shown, or only in combat.
+        local neededDriver = combatOnly and COMBAT_ONLY_DRIVER or SHOWN_DRIVER
         if not reminder.combatAspect then
             icon:SetAlpha(1)
         end
@@ -1393,7 +1440,7 @@ function DBR.RefreshReminders()
                 ApplyClick(icon, reminder, ClickAction(reminder, missing))
                 ShowIcon(icon, true, #missing)
                 ShowTimeLeft(icon, missing)
-                SetDriver(icon, SHOWN_DRIVER)
+                SetDriver(icon, neededDriver)
                 Raise(icon, holder, true)
                 local lacking = #icon.missing > 0
                 local timed = reminders.timed[reminder.key]
@@ -1489,6 +1536,18 @@ local function ScheduleRefresh()
         reminders.scheduled = true
         C_Timer.After(REFRESH_DELAY, DBR.RefreshReminders)
     end
+end
+
+-- The second check after a group, role, or zone change (RECHECK_DELAY). In
+-- combat it does nothing: combat's end refreshes anyway.
+local function ScheduleRecheck()
+    reminders.recheckToken = (reminders.recheckToken or 0) + 1
+    local token = reminders.recheckToken
+    C_Timer.After(RECHECK_DELAY, function()
+        if reminders.recheckToken == token and not InCombatLockdown() then
+            DBR.RefreshReminders()
+        end
+    end)
 end
 
 local function ShowTooltip(icon)
@@ -1710,9 +1769,11 @@ local function CreateSlot(reminder, holder, icon)
     layer:SetAllPoints(holder)
     layer:SetFrameLevel(icon:GetFrameLevel() + SLOT_LEVELS_ABOVE)
     NoMouse(layer)
-    -- Shown only when needed: "Visibility when not needed" while up.
-    if Windowed(reminder) then
-        layer:SetAlpha(FaintAlpha())
+    -- Shown only when needed: "Visibility when not needed" while up; shown
+    -- only in combat: transparent out of combat.
+    local alpha = SlotAlpha(reminder)
+    if alpha ~= 1 then
+        layer:SetAlpha(alpha)
     end
     local container = DBR.CreateAuraContainer(layer)
     container:SetPoint("CENTER", holder, "CENTER")
@@ -1886,9 +1947,28 @@ local function WindowReminders()
     return list
 end
 
+-- "Show only in combat" at combat's edges: the slot and the running-out
+-- border (alpha only) show from its start and hide at its end. A buff also
+-- shown only when needed gets its slot's alpha from its window instead.
+local function CombatOnlyEdge()
+    for _, reminder in ipairs(reminders.list) do
+        local key = reminder.key
+        if reminders.combatOnly[key] then
+            SetWarn(key, reminders.warnOn[key])
+            if not Windowed(reminder) then
+                local holder = reminders.widgets[key]
+                if holder then
+                    SetSlotAlpha(holder, SlotAlpha(reminder))
+                end
+            end
+        end
+    end
+end
+
 -- Combat starts: up and outside its lead, faint until the
 -- window. Missing, its end unknown, or a group member lacking it: in full.
 local function StartWindows()
+    CombatOnlyEdge()
     for _, reminder in ipairs(WindowReminders()) do
         local seen = reminders.seen[reminder.key]
         if seen and not reminders.icons[reminder.key].othersNeed then
@@ -1967,6 +2047,7 @@ end
 -- not needed" again while shown only when needed (out of combat the refresh decides). Also one
 -- whose setting changed in combat.
 local function EndWindows()
+    CombatOnlyEdge()
     for _, reminder in ipairs(reminders.list) do
         if reminders.faded[reminder.key] then
             OpenWindow(reminder.key)
@@ -2007,6 +2088,12 @@ local function SetUp()
     if reminders.container then
         events:RegisterEvent("PLAYER_REGEN_DISABLED")
     end
+    -- "Show only in combat" shows its running-out border at combat's start.
+    for _, reminder in ipairs(reminders.list) do
+        if DBR.CanShowOnlyInCombat(reminder) then
+            events:RegisterEvent("PLAYER_REGEN_DISABLED")
+        end
+    end
     for _, event in ipairs({"UNIT_AURA", "GROUP_ROSTER_UPDATE", "PLAYER_ENTERING_WORLD", "SPELLS_CHANGED",
         "PLAYER_REGEN_ENABLED", "PLAYER_DEAD", "PLAYER_ALIVE", "PLAYER_UNGHOST", "BAG_UPDATE_DELAYED",
         "UPDATE_SHAPESHIFT_FORM", "PLAYER_ROLES_ASSIGNED", "ROLE_CHANGED_INFORM",
@@ -2046,6 +2133,7 @@ events:SetScript("OnEvent", function(_, event, unit, _, spellID)
         return
     end
     if event == "PLAYER_REGEN_DISABLED" then
+        reminders.combat = true
         StartWindows()
         CombatStarts()
         DBR.WarningsAtCombat()
@@ -2058,6 +2146,7 @@ events:SetScript("OnEvent", function(_, event, unit, _, spellID)
         return
     end
     if event == "PLAYER_REGEN_ENABLED" then
+        reminders.combat = nil
         if reminders.setupPending then
             reminders.setupPending = false
             SetUp()
@@ -2068,6 +2157,9 @@ events:SetScript("OnEvent", function(_, event, unit, _, spellID)
         return
     end
     ScheduleRefresh()
+    if RECHECK_EVENTS[event] then
+        ScheduleRecheck()
+    end
 end)
 
 -- Warnings, on screen ------------------------------------------------------------------
@@ -2083,27 +2175,94 @@ local POP_PLACE = {point = "CENTER", relativePoint = "CENTER", x = 0, y = 300}
 local POP_HOLD, POP_FADE = 4, 1.5
 local warnings = {list = {}, state = {}}
 
--- Whether Dyre's Toolkit owns the Pet Taunt warning. Also with its switch
--- off: the toolkit keeps its claim (off means off). A toolkit before 2.9.0
--- has no Owners or no claim, so DBR's copy works.
-function DBR.ToolkitOwnsPetTaunt()
+-- The AddOn that gives the Pet Taunt warning now, when it is not DBR: any
+-- owner of the kind (Dyre's Toolkit 2.9.0 to 2.15.x claimed it as
+-- "DyresToolkit"; from 2.16.0 Dyre's Threat and Combat Tools claims it with
+-- its own folder, so a fixed name let both warn). Also with its switch off:
+-- the owner keeps its claim (off means off). No Owners or no claim: nil, and
+-- DBR's copy works.
+function DBR.PetTauntOwner()
     local toolkit = DBR.toolkit
-    return type(toolkit) == "table" and type(toolkit.KindOwner) == "function"
-        and toolkit.KindOwner(DBR.PET_TAUNT_KIND) == DBR.PET_TAUNT_OWNER
+    if type(toolkit) ~= "table" or type(toolkit.KindOwner) ~= "function" then
+        return nil
+    end
+    local owner = toolkit.KindOwner(DBR.PET_TAUNT_KIND)
+    if type(owner) == "string" and owner ~= "" and owner ~= addonName then
+        return owner
+    end
+    return nil
+end
+
+-- Whether another AddOn gives the warning (DBR then stays quiet).
+function DBR.ToolkitOwnsPetTaunt()
+    return DBR.PetTauntOwner() ~= nil
+end
+
+-- That AddOn's title, for the switch's tooltip: its TOC title, else the
+-- title it joined the toolkit with, else its folder.
+function DBR.PetTauntOwnerTitle(owner)
+    local getMetadata = C_AddOns and C_AddOns.GetAddOnMetadata
+    if type(getMetadata) == "function" then
+        local title = getMetadata(owner, "Title")
+        if type(title) == "string" and title ~= "" then
+            return title
+        end
+    end
+    return DBR.ProcOwnerTitle(owner)
 end
 
 local function Yields(warning)
     return warning.kind == "petTaunt" and DBR.ToolkitOwnsPetTaunt()
 end
 
-local function AnyWarningLive()
+-- Whether DBR can give any warning now: the reminders on, the warning's
+-- switch on, and no other AddOn giving it. (The spell is not checked: the
+-- spellbook can load after login.)
+local function FirstLiveWarning()
+    if not DBR.db.enabled then
+        return nil
+    end
     for _, warning in ipairs(warnings.list) do
-        if not Yields(warning) then
-            return true
+        if DBR.db.warnings[warning.key] and not Yields(warning) then
+            return warning
         end
     end
-    return false
+    return nil
 end
+
+local function AnyWarningLive()
+    return FirstLiveWarning() ~= nil
+end
+
+-- The unlocked sample: the class's own message, as WarningText words it,
+-- with the first spell of the warning (a Paladin's Righteous Fury, a
+-- Hunter's Growl, a Warlock's Torment), not always the pet taunt.
+local function SampleText(warning)
+    local spells = warning.kind == "fury" and warning.spells or warning.petTaunts or {}
+    local name = spells[1] and C_Spell.GetSpellName(spells[1])
+    if DBR.IsSecret(name) or type(name) ~= "string" or name == "" then
+        name = nil
+    end
+    if warning.kind == "fury" then
+        return (name or "Righteous Fury") .. " is on", "You're not the tank. Turn it off."
+    end
+    return "Pet taunt on", (name or "Your pet's taunt") .. " is on autocast in a group. Turn it off."
+end
+
+-- The message box shows only while DBR can give a warning, or one still
+-- shows (John, 2026-11-27: in layout mode an empty "Warning messages"
+-- outline beside Dyre's Threat and Combat Tools' one: "I can't tell what the
+-- top warning messages are from"). The toolkit's outline is a child of the
+-- frame, so it hides too. Not protected: fine in combat. The place stays
+-- saved; a hidden frame keeps its points.
+local function UpdatePopShown()
+    local pop = warnings.pop
+    if not pop then
+        return
+    end
+    pop.frame:SetShown(AnyWarningLive() or pop.fader:IsPlaying() or pop.content:IsShown() == true)
+end
+DBR.UpdateWarningBox = UpdatePopShown
 
 local function BuildPop()
     local frame = CreateFrame("Frame", "DyresBuffRemindersWarning", UIParent)
@@ -2122,24 +2281,31 @@ local function BuildPop()
     fade:SetToAlpha(0)
     fade:SetStartDelay(POP_HOLD)
     fade:SetDuration(POP_FADE)
-    fader:SetScript("OnFinished", function() content:Hide() end)
+    fader:SetScript("OnFinished", function()
+        content:Hide()
+        UpdatePopShown()
+    end)
     warnings.pop = {frame = frame, content = content, title = title, line = line, fader = fader}
     local pop = warnings.pop
     DBR.toolkit.CreateWidget({
         addon = addonName, key = "warnings", title = "Warning messages", frame = frame, store = DBR.db.warningPop,
         width = POP_WIDTH, height = POP_HEIGHT, point = POP_PLACE, sizes = {scale = true},
         onUnlock = function(_, unlocked)
-            if unlocked and AnyWarningLive() then
+            local sample = unlocked and FirstLiveWarning()
+            if sample then
+                local title, line = SampleText(sample)
                 pop.fader:Stop()
-                pop.title:SetText("Pet taunt on")
-                pop.line:SetText("Growl is on autocast in a group. Turn it off.")
+                pop.title:SetText(title)
+                pop.line:SetText(line)
                 pop.content:SetAlpha(1)
                 pop.content:Show()
             elseif not pop.fader:IsPlaying() then
                 pop.content:Hide()
             end
+            UpdatePopShown()
         end,
     })
+    UpdatePopShown()
 end
 
 local function ShowPop(title, line)
@@ -2149,6 +2315,7 @@ local function ShowPop(title, line)
     pop.fader:Stop()
     pop.content:SetAlpha(1)
     pop.content:Show()
+    pop.frame:Show()
     pop.fader:Play()
 end
 
@@ -2208,6 +2375,7 @@ function DBR.CheckWarnings()
             Announce(warning, state)
         end
     end
+    UpdatePopShown()
 end
 
 -- Combat starts: once more for each still true.
@@ -2250,8 +2418,9 @@ end
 function DBR.ReportWarningsDebug()
     for _, warning in ipairs(warnings.list) do
         local state = warnings.state[warning.key]
-        DBR.Report(string.format("debug warning %s on=%s known=%s toolkit=%s now=%s", warning.key,
-            tostring(DBR.db.warnings[warning.key]), tostring(KnownBy(warning)), tostring(Yields(warning)),
+        DBR.Report(string.format("debug warning %s on=%s known=%s owner=%s now=%s", warning.key,
+            tostring(DBR.db.warnings[warning.key]), tostring(KnownBy(warning)),
+            warning.kind == "petTaunt" and tostring(DBR.PetTauntOwner() or "DBR") or "DBR",
             state.text and (state.title .. ": " .. state.line) or "none"))
     end
 end

@@ -2,10 +2,10 @@
 ## Title: Dyre's Debuff Tracker
 ## Title-zhCN: Dyre's Debuff Tracker
 ## Notes: Tracks your DoTs and crowd control for every class, and shows when your DoTs will kill
-## Notes-zhCN: 追踪各职业的持续伤害与控制，并预测你的持续伤害何时能击杀目标
+## Notes-zhCN: 追踪各职业的持续伤害与控制，并预测你的持续伤害何时能击杀目标（汉化增强版）
 ## Author: Dyre
-## Version: 1.7.0
-## X-DDT-Fork: 1.7.0-fork.1
+## Version: 1.8.0
+## X-DDT-Fork: 1.8.0-fork.1
 ## IconTexture: Interface\AddOns\DyresDebuffTracker\Textures\Icon
 ## Category: Buffs & Debuffs
 ## OptionalDeps: DyresToolkit, DyresSounds

@@ -71,16 +71,43 @@ local function Readable(value)
     return type(value) == "string" and not IsSecret(value) and value ~= ""
 end
 
--- "Name - Realm", or nil while the client cannot say.
+-- "Name - Realm", or nil while the client cannot say the name. The realm:
+-- GetRealmName(), else UnitFullName's, else GetNormalizedRealmName(); with no
+-- realm at all, the name alone (2.16.0; a CurseForge player, 2026-11-27: on
+-- Forever GetRealmName() gave "", so import said "Your character is not ready
+-- yet" for good). A client that names the realm keeps the same key as before.
+local function RealmName()
+    if type(GetRealmName) == "function" then
+        local realm = GetRealmName()
+        if Readable(realm) then
+            return realm
+        end
+    end
+    if type(UnitFullName) == "function" then
+        local _, realm = UnitFullName("player")
+        if Readable(realm) then
+            return realm
+        end
+    end
+    if type(GetNormalizedRealmName) == "function" then
+        local realm = GetNormalizedRealmName()
+        if Readable(realm) then
+            return realm
+        end
+    end
+    return nil
+end
+
 function ns.CharacterKey()
-    if type(UnitName) ~= "function" or type(GetRealmName) ~= "function" then
+    if type(UnitName) ~= "function" then
         return nil
     end
-    local name, realm = UnitName("player"), GetRealmName()
-    if not Readable(name) or not Readable(realm) then
+    local name = UnitName("player")
+    if not Readable(name) then
         return nil
     end
-    return name .. " - " .. realm
+    local realm = RealmName()
+    return realm and (name .. " - " .. realm) or name
 end
 
 local function Copy(value, skip, depth)
@@ -842,8 +869,7 @@ function ns.AddProfileSettings(category, layout)
             return container:GetData()
         end
         rows.source = Settings.CreateDropdown(category, setting, Options,
-            ns.T("Pick another character's profile, or Defaults for a clean slate, then press Copy. It covers "
-                .. "every Dyre's AddOn.\n\nA character shows here after it logs in once with this version."))
+            ns.T("Pick another character's settings, or Defaults, then press Copy."))
         local function CopyChoice()
             if not CanCopy() then
                 ns.Report(ns.T("Pick another character's profile, or Defaults, to copy."))
@@ -868,6 +894,7 @@ function ns.AddProfileSettings(category, layout)
             if type(rows.copy) == "table" and type(rows.copy.AddModifyPredicate) == "function" then
                 rows.copy:AddModifyPredicate(CanCopy)
             end
+            DyresToolkit.GreyButtonLabel(rows.copy)
             layout:AddInitializer(rows.copy)
         end
     end

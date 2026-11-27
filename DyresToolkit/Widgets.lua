@@ -199,6 +199,29 @@ local function Setup(widget)
     end
 end
 
+-- Which AddOn an outline belongs to (2.17.0; John, 2026-11-27, two
+-- "Warning messages" outlines in layout mode: "I can't tell what the top
+-- warning messages are from"): the AddOn's title, "Dyre's " said once, before
+-- the hint. The toolkit's own widgets have none.
+local function OwnerPrefix(widget)
+    local addon = widget.dyre.addon
+    if type(addon) ~= "string" or addon == "DyresToolkit" then
+        return ""
+    end
+    local read = type(C_AddOns) == "table" and C_AddOns.GetAddOnMetadata or rawget(_G, "GetAddOnMetadata")
+    local ok, title = false, nil
+    if type(read) == "function" then
+        ok, title = pcall(read, addon, "Title")
+    end
+    if not ok or type(title) ~= "string" or title == "" then
+        return ""
+    end
+    title = title:gsub("|c%x%x%x%x%x%x%x%x", ""):gsub("|r", "")
+    return ns.ShortName(title) .. ": "
+end
+
+local FLIP_SIZE = 24
+
 local function CreateMover(widget)
     local mover = CreateFrame("Frame", nil, widget, "BackdropTemplate")
     mover:SetPoint("TOPLEFT", -MOVER_INSET, MOVER_INSET)
@@ -210,8 +233,38 @@ local function CreateMover(widget)
     mover:EnableMouse(false)
     mover.hint = mover:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
     mover.hint:SetPoint("BOTTOM", mover, "TOP", 0, 2)
-    mover.hint:SetText(widget.dyre.hint or ns.T("%s · drag to move · /dyre lock when done")
-        :format(widget.dyre.title))
+    mover.hint:SetText(OwnerPrefix(widget) .. (widget.dyre.hint
+        or ns.T("%s · drag to move · /dyre lock when done"):format(widget.dyre.title)))
+    -- The flip button (2.18.0; John, 2026-11-27: users "are going to want a
+    -- way to flip the bar from vertical to horizontal in unlocked mode";
+    -- "A button with an arrow going around"): on the outline's top-right
+    -- corner, shown only on a bar laid out by LayoutButtons. The outline is
+    -- ours, so no Blizzard or secure frame is touched; a right-click on the
+    -- bar's own buttons would cast their spells. The texture is the model
+    -- rotate arrow, UI-RotationRight-Button-Up (Blizzard's Vanilla
+    -- PaperDollFrame.xml and shared ModelSceneTemplates use it).
+    local flip = CreateFrame("Button", nil, mover)
+    flip:SetSize(FLIP_SIZE, FLIP_SIZE)
+    flip:SetPoint("CENTER", mover, "TOPRIGHT", -FLIP_SIZE / 2, -FLIP_SIZE / 2)
+    if flip.SetNormalTexture then
+        flip:SetNormalTexture("Interface\\Buttons\\UI-RotationRight-Button-Up")
+        flip:SetPushedTexture("Interface\\Buttons\\UI-RotationRight-Button-Down")
+        flip:SetHighlightTexture("Interface\\Buttons\\ButtonHilight-Round", "ADD")
+    end
+    flip:EnableMouse(true)
+    flip:SetScript("OnClick", function()
+        widget:SetOrientation(widget:GetOrientation() == "vertical" and "horizontal" or "vertical")
+    end)
+    flip:SetScript("OnEnter", function(self)
+        if GameTooltip then
+            GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+            GameTooltip:SetText(ns.T("Switch between a row and a column."))
+            GameTooltip:Show()
+        end
+    end)
+    flip:SetScript("OnLeave", function() if GameTooltip then GameTooltip:Hide() end end)
+    flip:Hide()
+    mover.flip = flip
     return mover
 end
 
@@ -263,6 +316,123 @@ function WidgetMethods.SetContentSize(widget, width, height, anchor)
         widget.dyre.lastAnchor = anchor
     end
     Apply(widget)
+end
+
+-- Button bars, horizontal or vertical (2.18.0; a CurseForge player asked for
+-- MTF's portal and conjure bars: "Is it possible to add an option to change
+-- the portal and conjure bars from horizontal to vertical?"; John,
+-- 2026-11-27: a Toolkit feature for every button bar). The orientation is
+-- saved in the widget's store (`orientation`: "vertical", else horizontal),
+-- so it is in the AddOn's own settings and profile part.
+-- widget:LayoutButtons(buttons, opts) places the buttons in order, from the
+-- top-left: a row, or a column; opts.size (each button's size, default 36),
+-- opts.gap (default 4), opts.padding (default 0), opts.anchor (the edge kept
+-- in place as the size changes, as SetContentSize; default the center, so a
+-- switch keeps the bar where it was). The buttons may be secure: they move
+-- only out of combat (DyresToolkit.OutOfCombat; a change in combat applies
+-- when combat ends). The last call is kept, so a change of orientation lays
+-- the same buttons out again.
+DyresToolkit.BAR_LAYOUT_VERSION = 1
+local ORIENTATIONS = {horizontal = true, vertical = true}
+
+function WidgetMethods.GetOrientation(widget)
+    return widget.dyre.store.orientation == "vertical" and "vertical" or "horizontal"
+end
+
+function WidgetMethods.LayoutButtons(widget, buttons, opts)
+    opts = type(opts) == "table" and opts or {}
+    widget.dyre.bar = {buttons = buttons, opts = opts}
+    if widget.dyre.mover and widget.dyre.mover.flip then
+        widget.dyre.mover.flip:Show()
+    end
+    local size, gap, padding = opts.size or 36, opts.gap or 4, opts.padding or 0
+    local vertical = widget:GetOrientation() == "vertical"
+    local count = math.max(type(buttons) == "table" and #buttons or 0, 1)
+    local long = padding * 2 + count * size + (count - 1) * gap
+    local short = padding * 2 + size
+    DyresToolkit.OutOfCombat("dyreBar:" .. tostring(widget.dyre.addon) .. ":" .. tostring(widget.dyre.widgetKey),
+        function()
+            for index, button in ipairs(type(buttons) == "table" and buttons or {}) do
+                local step = padding + (index - 1) * (size + gap)
+                button:ClearAllPoints()
+                if vertical then
+                    button:SetPoint("TOPLEFT", widget, "TOPLEFT", padding, -step)
+                else
+                    button:SetPoint("TOPLEFT", widget, "TOPLEFT", step, -padding)
+                end
+            end
+        end)
+    if vertical then
+        widget:SetContentSize(short, long, opts.anchor)
+    else
+        widget:SetContentSize(long, short, opts.anchor)
+    end
+    return vertical and "vertical" or "horizontal"
+end
+
+-- Saves the orientation and lays the last buttons out again.
+function WidgetMethods.SetOrientation(widget, value)
+    if not ORIENTATIONS[value] then
+        return
+    end
+    widget.dyre.store.orientation = value == "vertical" and "vertical" or nil
+    if widget.dyre.bar then
+        widget:LayoutButtons(widget.dyre.bar.buttons, widget.dyre.bar.opts)
+    end
+    -- An open settings page shows the new value (a flip from the outline).
+    for _, variable in ipairs(widget.dyre.layoutVariables or {}) do
+        if type(Settings) == "table" and type(Settings.NotifyUpdate) == "function" then
+            pcall(Settings.NotifyUpdate, variable)
+        end
+    end
+end
+
+-- The "Layout" row: Horizontal or Vertical. opts: label (default "Layout"),
+-- tooltip, variable (a settings section's ctx.variable), modify and watch
+-- (greyed while the bar is off, as AddWidgetSettings). Gives the initializer,
+-- or nil without the settings API (a dropdown, else a "Vertical" checkbox).
+function DyresToolkit.AddBarLayoutSetting(category, layout, widget, opts)
+    if type(Settings) ~= "table" or type(Settings.RegisterProxySetting) ~= "function" or type(category) ~= "table"
+            or type(widget) ~= "table" or type(widget.dyre) ~= "table" then
+        return nil
+    end
+    opts = type(opts) == "table" and opts or {}
+    local name = ("DYRE_" .. widget.dyre.addon .. "_" .. widget.dyre.widgetKey .. "_ORIENTATION"):upper()
+        :gsub("[^%w_]", "_")
+    if type(opts.variable) == "function" then
+        name = opts.variable(name)
+    end
+    local tooltip = opts.tooltip or ns.T("Lay the buttons out in a row or a column.")
+    widget.dyre.layoutVariables = widget.dyre.layoutVariables or {}
+    table.insert(widget.dyre.layoutVariables, name)
+    local initializer
+    if type(Settings.CreateDropdown) == "function" and type(Settings.CreateControlTextContainer) == "function"
+            and Settings.VarType.String then
+        local setting = Settings.RegisterProxySetting(category, name, Settings.VarType.String,
+            opts.label or ns.T("Layout"), "horizontal", function() return widget:GetOrientation() end,
+            function(value) widget:SetOrientation(value) end)
+        local function Options()
+            local container = Settings.CreateControlTextContainer()
+            container:Add("horizontal", ns.T("Horizontal"))
+            container:Add("vertical", ns.T("Vertical"))
+            return container:GetData()
+        end
+        initializer = Settings.CreateDropdown(category, setting, Options, tooltip)
+    elseif type(Settings.CreateCheckbox) == "function" then
+        local setting = Settings.RegisterProxySetting(category, name, Settings.VarType.Boolean,
+            ns.T("Vertical"), false, function() return widget:GetOrientation() == "vertical" end,
+            function(value) widget:SetOrientation(value and "vertical" or "horizontal") end)
+        initializer = Settings.CreateCheckbox(category, setting, tooltip)
+    end
+    if type(initializer) == "table" then
+        if type(opts.modify) == "function" and type(initializer.AddModifyPredicate) == "function" then
+            initializer:AddModifyPredicate(opts.modify)
+        end
+        if opts.watch and type(DyresToolkit.WatchSettings) == "function" then
+            DyresToolkit.WatchSettings(initializer, opts.watch)
+        end
+    end
+    return initializer
 end
 
 -- One of scale, width, height, opacity: clamped, saved, and applied.
@@ -489,7 +659,13 @@ local function VariableName(widget, name)
     return ("DYRE_" .. widget.dyre.addon .. "_" .. widget.dyre.widgetKey .. "_" .. name):upper():gsub("[^%w_]", "_")
 end
 
--- opts: labels (name -> text), tooltips (name -> text), resetLabel, resetTooltip.
+-- opts: labels (name -> text), tooltips (name -> text), resetLabel, resetTooltip,
+-- variable (2.17.0: a function that maps each setting variable, such as a
+-- settings section's ctx.variable on a host page, where the owner's page has
+-- registered the plain names already), modify (2.17.0: a function; the rows
+-- are greyed while it gives false, e.g. the feature's switch is off), watch
+-- (2.17.0: a variable or a list; the rows check modify again live when one
+-- of them changes; see WatchSettings).
 function DyresToolkit.AddWidgetSettings(category, layout, widget, opts)
     if type(Settings) ~= "table" or type(category) ~= "table" or type(widget) ~= "table" or not widget.dyre.sizes then
         return false
@@ -501,29 +677,49 @@ function DyresToolkit.AddWidgetSettings(category, layout, widget, opts)
         local range = widget.dyre.sizes[name]
         if range then
             local variable = VariableName(widget, name)
+            if type(opts.variable) == "function" then
+                variable = opts.variable(variable)
+            end
             variables[#variables + 1] = variable
             local label = labels[name] or range.label or LABELS[name] or name
             local setting = Settings.RegisterProxySetting(category, variable, Settings.VarType.Number, label,
                 range.default, function() return widget:GetSetting(name) end,
                 function(value) widget:SetSetting(name, value) end)
             local tooltip = tooltips[name] or (name == "opacity"
-                and ns.T("How solid it is. It fades at once, also in combat.")
-                or ns.T("Its %s. A change in combat applies when combat ends.")
-                    :format(label:lower():gsub(" %(%%%)", "")))
-            ns.AddDefaultTick(Settings.CreateSlider(category, setting, SliderOptions(name, range), tooltip), range)
+                and ns.T("How solid it is.")
+                or ns.T("Its %s."):format(label:lower():gsub(" %(%%%)", "")))
+            local slider = Settings.CreateSlider(category, setting, SliderOptions(name, range), tooltip)
+            if type(opts.modify) == "function" and type(slider) == "table"
+                    and type(slider.AddModifyPredicate) == "function" then
+                slider:AddModifyPredicate(opts.modify)
+            end
+            if opts.watch then
+                DyresToolkit.WatchSettings(slider, opts.watch)
+            end
+            ns.AddDefaultTick(slider, range)
         end
     end
     local resizable = #widget.dyre.sizes.order > (widget.dyre.sizes.opacity and 1 or 0)
     if resizable and type(CreateSettingsButtonInitializer) == "function" and type(layout) == "table"
             and type(layout.AddInitializer) == "function" then
-        layout:AddInitializer(CreateSettingsButtonInitializer(widget.dyre.title,
+        local reset = CreateSettingsButtonInitializer(widget.dyre.title,
             opts.resetLabel or ns.T("Reset size"),
             function()
                 widget:ResetSize()
                 for _, variable in ipairs(variables) do
                     Settings.NotifyUpdate(variable)
                 end
-            end, opts.resetTooltip or ns.T("Back to its own size. Opacity stays as it is."), true))
+            end, opts.resetTooltip or ns.T("Puts it back to its normal size."), true)
+        if type(opts.modify) == "function" and type(reset.AddModifyPredicate) == "function" then
+            reset:AddModifyPredicate(opts.modify)
+        end
+        if opts.watch then
+            DyresToolkit.WatchSettings(reset, opts.watch)
+        end
+        if type(DyresToolkit.GreyButtonLabel) == "function" then
+            DyresToolkit.GreyButtonLabel(reset)
+        end
+        layout:AddInitializer(reset)
     end
     return true
 end

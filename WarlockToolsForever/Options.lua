@@ -5,21 +5,24 @@ local _, WTF = ...
 -- with proxy settings that read and write WarlockToolsForeverDB directly;
 -- Announce needs text fields, so it is a canvas page. The pages of features
 -- that moved to other Dyre's AddOns each hold one row that opens that AddOn.
-local TITLE = "Warlock Tools Forever"
-local SHARDS_TITLE = WTF.T("Soul Shards")
-local STONES_TITLE = WTF.T("Stones")
 local ANNOUNCE = WTF.L.announcePage
 local ANNOUNCE_TITLE = ANNOUNCE.title
 local MAIN_ANNOUNCE = WTF.L.mainAnnounce
+local TITLE = "Warlock Tools Forever"
+local SHARDS_TITLE = WTF.T("Soul Shards")
+local STONES_TITLE = WTF.T("Stones")
+-- The moved pages' titles when the owner gives none (John, 2026-11-27: "let's
+-- use the same name consistently everywhere"): the owner's section title
+-- (SettingsSectionTitle) names the page, so its own heading, this page, and
+-- the switch on WTF's top page read the same.
 local TRACKER_TITLE = WTF.T("DoT Tracker")
 local DOTS_TITLE = WTF.T("DoTs")
-local ALERTS_TITLE = WTF.T("Alerts")
-local SHIELD_TITLE = WTF.T("Shield")
-local CHIMES_TITLE = WTF.T("Cooldown Chimes")
-local REMINDER_TITLE = WTF.T("Demon Armor")
+local PROCS_TITLE = WTF.T("Procs")
+local SHIELD_TITLE = WTF.T("Shield display")
+local CHIMES_TITLE = WTF.T("Chimes")
+local REMINDERS_TITLE = WTF.T("Reminders")
 local CONTROL_TITLE = WTF.T("Control")
 local UNAVAILABLE = WTF.T("The AddOn settings page is unavailable on this client. Use /wtf shards for status.")
-local GOLD = {1, 0.82, 0}
 
 local REQUIRED_SETTINGS = {
     "RegisterVerticalLayoutCategory", "RegisterVerticalLayoutSubcategory", "RegisterCanvasLayoutSubcategory",
@@ -125,14 +128,40 @@ end
 -- settings pages should simply redirect users to DDT") the DoT Tracker (with
 -- the prediction and the smart curse), DoTs, and Control pages, in their old
 -- places.
+--
+-- Since 1.13.0 (John, 2026-11-26: WTF "should surface every setting in the
+-- wrapped addon's settings, and just pass-through the setting to the wrapped
+-- addon"), each page asks Dyre's Toolkit 2.17.0's AddSettingsSection for the
+-- owner's own rows (`section`, `filter`): they read and write the owner's live
+-- settings, as its own page does. The toolkit draws the link above when the
+-- owner, or its section, is missing; an older toolkit keeps the link as before.
+-- `primer` (John, 2026-11-27: when the AddOn is missing, a box that tells
+-- "people what they get if they install it"): the toolkit shows it above the
+-- link only while the owner is not loaded. At most 400 characters; the box
+-- does not grow, so each stays under 300.
 local DDT = {addon = "DyresDebuffTracker", owner = "Dyre's Debuff Tracker",
-    button = WTF.T("Open Debuff Tracker settings"), since = "1.11.0"}
+    button = WTF.T("Open Debuff Tracker settings")}
 local DDT_PAGES = {
-    {title = TRACKER_TITLE, variable = "WTF_MOVED_TRACKER", name = WTF.T("DoT tracker and damage prediction"),
-        what = WTF.T("The DoT tracker, DoT damage prediction, and the smart curse")},
-    {title = DOTS_TITLE, variable = "WTF_MOVED_DOTS", name = WTF.T("DoT colors, order, and nameplate dots"),
-        what = WTF.T("The DoT colors, order, and nameplate DoT dots")},
-    {title = CONTROL_TITLE, variable = "WTF_MOVED_CONTROL", name = WTF.T("Control bar, macros, and announcements"),
+    {title = TRACKER_TITLE, variable = "WTF_MOVED_TRACKER",
+        name = WTF.T("DoT tracker and damage prediction"),
+        section = "tracker", what = WTF.T("The DoT tracker, DoT damage prediction, and the smart curse"),
+        primer = WTF.T("Dyre's Debuff Tracker adds the DoT tracker here: your DoTs and time left on every mob. "
+            .. "A block on the health bar shows the damage your DoTs will still deal, and DIES when that is "
+            .. "enough to kill. Also the smart curse, with its macro and key binding. Install Dyre's Debuff "
+            .. "Tracker from CurseForge.")},
+    {title = DOTS_TITLE, variable = "WTF_MOVED_DOTS",
+        name = WTF.T("DoT colors, order, and nameplate dots"),
+        section = "dots", what = WTF.T("The DoT colors, order, and nameplate DoT dots"),
+        primer = WTF.T("Dyre's Debuff Tracker adds the DoT settings here: the color of each DoT on the bars, the "
+            .. "order of your DoTs, and DoT dots on enemy nameplates, so you see which mobs still need a DoT. "
+            .. "Install Dyre's Debuff Tracker from CurseForge.")},
+    {title = CONTROL_TITLE, variable = "WTF_MOVED_CONTROL",
+        name = WTF.T("Control bar, macros, and announcements"),
+        section = "control",
+        primer = WTF.T("Dyre's Debuff Tracker adds the Control bar here: Fear and Banish timers, a Focus box, "
+            .. "Fear timers under nameplates, the \"! Fear\", \"! Banish\", and \"! Seduction\" macros, and "
+            .. "messages to your group for Fear, Banish, Enslave Demon, and Howl of Terror. Install Dyre's Debuff "
+            .. "Tracker from CurseForge."),
         what = WTF.T("The Control bar, \"! Fear\", \"! Banish\", \"! Seduction\", and the Fear and Banish announcements")},
 }
 for _, moved in ipairs(DDT_PAGES) do
@@ -142,16 +171,37 @@ for _, moved in ipairs(DDT_PAGES) do
 end
 local MOVED_PAGES = {
     {title = SHIELD_TITLE, variable = "WTF_MOVED_SHIELD", addon = "DyresShieldsUp", owner = "Dyre's Shields Up",
-        name = WTF.T("Shield display"), button = WTF.T("Open Shield settings"), what = WTF.T("The shield display")},
+        name = WTF.T("Shield display"), button = WTF.T("Open Shield settings"), what = WTF.T("The shield display"), section = "shield",
+        primer = WTF.T("Dyre's Shields Up adds the shield display here: a crescent that shows how much your Shadow "
+            .. "Ward or your Voidwalker's Sacrifice can still absorb, and any other shield on you. Install "
+            .. "Dyre's Shields Up from CurseForge.")},
     {title = CHIMES_TITLE, variable = "WTF_MOVED_CHIMES", addon = "DyresBuffReminders",
-        owner = "Dyre's Buff Reminders", name = WTF.T("Cooldown chimes"), button = WTF.T("Open Chime settings"),
-        what = WTF.T("The cooldown chimes")},
-    {title = ALERTS_TITLE, variable = "WTF_MOVED_NIGHTFALL", addon = "DyresBuffReminders",
-        owner = "Dyre's Buff Reminders", name = WTF.T("Nightfall sound"), button = WTF.T("Open Proc settings"),
-        what = WTF.T("The Nightfall sound (Proc Sounds)"), procKey = "nightfall"},
-    {title = REMINDER_TITLE, variable = "WTF_MOVED_REMINDER", addon = "DyresBuffReminders",
-        owner = "Dyre's Buff Reminders", name = WTF.T("Demon Armor reminder"),
-        button = WTF.T("Open Reminder settings"), what = WTF.T("The Demon Armor reminder")},
+        owner = "Dyre's Buff Reminders", name = WTF.T("Chimes"), button = WTF.T("Open Chime settings"),
+        what = WTF.T("Chimes"), section = "chimes",
+        primer = WTF.T("Dyre's Buff Reminders adds the cooldown chimes here: a sound just before your chosen spells, "
+            .. "such as Death Coil, are ready again, so you can act the moment they are, also in combat. "
+            .. "Install Dyre's Buff Reminders from CurseForge.")},
+    -- Every Warlock proc (John, 2026-11-27: "Let's add all the Warlock
+    -- procs/alerts and reminders"): no filter. `also`: Dyre's Debuff Tracker's
+    -- "cues" (the Demonic Brand pentagram) after it, on the same page.
+    {title = PROCS_TITLE, variable = "WTF_MOVED_NIGHTFALL", addon = "DyresBuffReminders",
+        owner = "Dyre's Buff Reminders", name = WTF.T("Procs"), button = WTF.T("Open Proc settings"),
+        what = WTF.T("Procs"), procKey = "nightfall", section = "procs",
+        primer = WTF.T("Dyre's Buff Reminders adds your procs here: a sound and arcs on screen when Nightfall makes "
+            .. "your next Shadow Bolt instant, or when Decimation procs. Install Dyre's Buff Reminders from "
+            .. "CurseForge."),
+        also = {variable = "WTF_MOVED_CUES", addon = "DyresDebuffTracker", owner = "Dyre's Debuff Tracker",
+            section = "cues", name = WTF.T("Debuff Cues"), button = WTF.T("Open Debuff Tracker settings"),
+            what = WTF.T("Debuff Cues"),
+            primer = WTF.T("Dyre's Debuff Tracker adds a red pentagram above an enemy's nameplate while your Demonic "
+                .. "Brand is on it, so you know when to recast it. Install Dyre's Debuff Tracker from "
+                .. "CurseForge.")}},
+    {title = REMINDERS_TITLE, variable = "WTF_MOVED_REMINDER", addon = "DyresBuffReminders",
+        owner = "Dyre's Buff Reminders", name = WTF.T("Reminders"), button = WTF.T("Open Reminder settings"),
+        what = WTF.T("Reminders"), section = "reminders",
+        primer = WTF.T("Dyre's Buff Reminders adds your reminders here: an icon when Demon Armor is missing (a click "
+            .. "casts it), a warning when you have no demon out, and one when your Voidwalker's Torment is on "
+            .. "autocast in a group you don't tank. Install Dyre's Buff Reminders from CurseForge.")},
 }
 
 -- The Dyre's AddOn that plays a proc with its arcs (1.10.1): the owner of the
@@ -186,13 +236,23 @@ function WTF.ProcOwnerTitle(owner)
     return info and type(info.title) == "string" and info.title or owner
 end
 
+-- Player words (2026-11-27): what the player sees, not who owns what.
+-- "Dyre's Buff Reminders'", "Dyre's Shields Up's".
+local function Possessive(name)
+    return name .. (name:sub(-1) == "s" and "'" or "'s")
+end
+
+local function ProcName(key)
+    return (key:gsub("^%l", string.upper))
+end
+
 local function ProcOwnerTooltip(key)
     local owner = WTF.ProcOwner(key)
     if not owner then
-        return WTF.T("No AddOn plays it with proc arcs now.")
+        return string.format(WTF.T("No AddOn shows %s arcs now."), ProcName(key))
     end
-    return string.format(WTF.T("%s plays it with its proc arcs. This opens its settings."),
-        WTF.ProcOwnerTitle(owner))
+    return string.format(WTF.T("Opens %s settings for the %s arcs and sound."),
+        Possessive(WTF.ProcOwnerTitle(owner)), ProcName(key))
 end
 
 -- The click asks for the owner again: one row for any owner.
@@ -200,7 +260,7 @@ local function OpenProcOwner(key)
     local owner = WTF.ProcOwner(key)
     local info = owner and Member(owner)
     if not info or type(info.openSettings) ~= "function" then
-        WTF.Report(WTF.T("No Dyre's AddOn plays it with proc arcs now."))
+        WTF.Report(string.format(WTF.T("No Dyre's AddOn shows %s arcs now."), ProcName(key)))
         return
     end
     if InCombatLockdown() then
@@ -218,8 +278,7 @@ local function AddProcOwnerRow(layout, moved)
         return nil
     end
     local key = moved.procKey
-    local base = moved.name:gsub(" sound$", ""):gsub("音效$", "")
-    local name = string.format(WTF.T("%s arcs and sound"), base)
+    local name = string.format(WTF.T("%s arcs and sound"), ProcName(key))
     local row = CreateSettingsButtonInitializer(name, WTF.T("Open settings"), function() OpenProcOwner(key) end,
         ProcOwnerTooltip(key), true)
     layout:AddInitializer(row)
@@ -236,32 +295,147 @@ local function AddProcOwnerRow(layout, moved)
     return row
 end
 
+local function Missing(moved)
+    return string.format(WTF.T("Install %s from CurseForge for %s."), moved.owner,
+        moved.what:gsub("^The", "the"))
+end
+
+-- The Toolkit's AddSettingsLink options for a moved page.
+local function LinkOptions(moved)
+    return {addon = moved.addon, name = moved.name, button = moved.button, missing = Missing(moved),
+        tooltip = string.format(WTF.T("Opens %s settings for %s."), Possessive(moved.owner),
+            moved.what:gsub("^The", "the"))}
+end
+
 -- One row: the Toolkit's link, else (without Dyre's Toolkit 2.3.0) the note only.
 local function AddMovedRow(page, layout, moved)
-    local missing = string.format(WTF.T("Install %s from CurseForge for %s."), moved.owner, moved.what)
-    local version = moved.since or "1.3.0"
     local link = WTF.toolkit and type(WTF.toolkit.AddSettingsLink) == "function"
-        and WTF.toolkit.AddSettingsLink(page, layout, {addon = moved.addon, name = moved.name,
-            button = moved.button, missing = missing,
-            tooltip = string.format(WTF.T("%s moved to %s in WTF %s. This opens its settings."), moved.what,
-                moved.owner, version)})
+        and WTF.toolkit.AddSettingsLink(page, layout, LinkOptions(moved))
     if link then
         return link
     end
-    return Notice(page, moved.variable, string.format(WTF.T("%s (moved to %s)"), moved.name, moved.owner),
-        string.format(WTF.T("%s moved to %s in WTF %s. %s"), moved.what, moved.owner, version, missing))
+    return Notice(page, moved.variable, string.format(WTF.T("%s (in %s)"), moved.name, moved.owner),
+        Missing(moved))
+end
+
+local SECTION_HOST = "WarlockToolsForever"
+
+local function HasSections()
+    return WTF.toolkit and type(WTF.toolkit.AddSettingsSection) == "function"
+end
+
+-- Whether the owner registered the page's section. Owners register by their
+-- ADDON_LOADED, before WTF's PLAYER_LOGIN builds this page. Without
+-- SettingsSections the toolkit decides alone.
+local function SectionRegistered(moved)
+    local list = type(WTF.toolkit.SettingsSections) == "function" and WTF.toolkit.SettingsSections(moved.addon)
+    if type(list) ~= "table" then
+        return true
+    end
+    for _, key in ipairs(list) do
+        if key == moved.section then
+            return true
+        end
+    end
+    return false
+end
+
+-- Toolkit 2.17.0's primer box (AddSettingsSection's `primer`, and
+-- AddSettingsPrimer). An older toolkit ignores the field; WTF passes it only
+-- with the function there.
+local function HasPrimer()
+    return WTF.toolkit and type(WTF.toolkit.AddSettingsPrimer) == "function"
+end
+
+-- Sections in parts (SETTINGS_SECTIONS_VERSION 3; John, 2026-11-27: "the
+-- top-level disable for each section should be on the top-level MTF panel",
+-- and "when the top-level is off, the settings that are controlling a
+-- disabled feature should be disabled too"): each owner's top switch
+-- ("master") on WTF's top page, the rest on the sub-page, greyed by the owner
+-- while that switch is off. With less, every sub-page keeps its whole section.
+local function HasParts()
+    return HasSections() and (tonumber(WTF.toolkit.SETTINGS_SECTIONS_VERSION) or 0) >= 3
+end
+
+-- The owner's rows, else the toolkit's link (both drawn by the toolkit), else
+-- nil when it drew nothing.
+local function AddMovedSection(page, layout, moved)
+    return WTF.toolkit.AddSettingsSection(page, layout, {addon = moved.addon, key = moved.section,
+        host = SECTION_HOST, filter = moved.filter, link = LinkOptions(moved),
+        primer = HasPrimer() and moved.primer or nil, part = HasParts() and "rest" or nil})
+end
+
+-- The owner's top switch on WTF's top page. With the owner missing, or a
+-- section with no single top switch, the toolkit adds nothing: the sub-page
+-- has the link and the primer. No filter: Dyre's Buff Reminders' "procs"
+-- master is the proc engine's switch (John, 2026-11-27: "Add the Procs master
+-- switch"), which turns every Warlock proc cue off. Its name is the one the
+-- owner gives. The Procs page's second section (Demonic Brand) follows it.
+local function AddMovedMaster(page, layout, moved)
+    WTF.toolkit.AddSettingsSection(page, layout, {addon = moved.addon, key = moved.section,
+        host = SECTION_HOST, part = "master"})
+    if moved.also then
+        AddMovedMaster(page, layout, moved.also)
+    end
+end
+
+-- The page's title: the owner's section title, else WTF's word for it.
+local function PageTitle(moved)
+    local toolkit = WTF.toolkit
+    local title = toolkit and type(toolkit.SettingsSectionTitle) == "function" and moved.section
+        and toolkit.SettingsSectionTitle(moved.addon, moved.section)
+    return type(title) == "string" and title ~= "" and title or moved.title
+end
+
+-- Whether an AddOn is loaded (joined the toolkit, or loaded by the client).
+local function Loaded(addon)
+    if Member(addon) then
+        return true
+    end
+    local isLoaded = type(C_AddOns) == "table" and C_AddOns.IsAddOnLoaded or rawget(_G, "IsAddOnLoaded")
+    return type(isLoaded) == "function" and isLoaded(addon) == true
 end
 
 local function CanShow(row)
     return type(row) == "table" and type(row.AddShownPredicate) == "function"
 end
 
+local AddOwnerRows
+
 local function AddMovedPage(parent, moved)
-    local page, layout = Settings.RegisterVerticalLayoutSubcategory(parent, moved.title)
+    local page, layout = Settings.RegisterVerticalLayoutSubcategory(parent, PageTitle(moved))
+    AddOwnerRows(page, layout, moved)
+    -- A second owner's section on the same page (the Procs page: Dyre's Debuff
+    -- Tracker's Demonic Brand), with its own link and primer.
+    if moved.also and HasSections() then
+        if not AddMovedSection(page, layout, moved.also) then
+            AddMovedRow(page, layout, moved.also)
+        end
+    end
+end
+
+AddOwnerRows = function(page, layout, moved)
     local key = moved.procKey
+    -- The Nightfall page keeps its proc owner rows (below) while Dyre's Buff
+    -- Reminders has no "procs" section: a plain link could not follow the owner.
+    if HasSections() and moved.section and (not key or SectionRegistered(moved)) then
+        if AddMovedSection(page, layout, moved) then
+            return
+        end
+        AddMovedRow(page, layout, moved)
+        return
+    end
     if not key or not (WTF.toolkit and type(WTF.toolkit.AddSettingsLink) == "function") then
         AddMovedRow(page, layout, moved)
         return
+    end
+    -- The proc owner rows draw their own primer while Dyre's Buff Reminders is
+    -- missing, shown only while no AddOn plays Nightfall with its arcs.
+    if HasPrimer() and moved.primer and not Loaded(moved.addon) then
+        local primer = WTF.toolkit.AddSettingsPrimer(page, layout, moved.primer)
+        if CanShow(primer) then
+            primer:AddShownPredicate(function() return WTF.ProcOwner(key) == nil end)
+        end
     end
     -- A proc (Nightfall): two rows, one shown. With no owner, the old row to
     -- Dyre's Buff Reminders; with one, the owner's row. The owner is asked
@@ -326,7 +500,7 @@ local function AddShardPage(parent)
         options:SetLabelFormatter(MinimalSliderWithSteppersMixin.Label.Right)
     end
     local limitInitializer = Settings.CreateSlider(page, limit, options,
-        WTF.T("How many Soul Shards to keep in your bags. Turn off Match soul bag size to change it."))
+        WTF.T("How many Soul Shards to keep in your bags."))
     DefaultTick(limitInitializer, WTF.SHARD_LIMIT_MIN, WTF.SHARD_LIMIT_MAX, WTF.DEFAULT_SHARD_LIMIT)
     limitInitializer:SetParentInitializer(autoInitializer, function()
         return not WTF.db.shards.autoLimit
@@ -335,7 +509,7 @@ local function AddShardPage(parent)
     Flag(page, "WTF_SHARDS_REPORT", WTF.T("Report deletions in chat"), "shards", "report", true,
         WTF.T("Print one chat line for each Soul Shard WTF deletes."))
     local counterInitializer = Flag(page, "WTF_SHARDS_COUNTER", WTF.T("Show the shard counter"), "shards", "counter",
-        true, WTF.T("A Soul Shard icon with your shard count: red when low, green at your limit. Drag it to move it."),
+        true, WTF.T("A Soul Shard icon with your shard count: red when low, green at your limit."),
         RefreshShardCounter)
     local low = Proxy(page, "WTF_SHARDS_COUNTER_LOW", Settings.VarType.Number, WTF.T("Low shard warning"),
         WTF.DEFAULT_SHARD_LOW,
@@ -358,42 +532,67 @@ local function AddShardPage(parent)
         function(value) WTF.SetShardCounterScale(value) end)
     local counterScaleInitializer = Settings.CreateSlider(page, counterScale,
         SliderOptions(WTF.FRAME_SCALE_MIN, WTF.FRAME_SCALE_MAX, WTF.FRAME_SCALE_STEP, true),
-        WTF.T("How big the shard counter is, in percent. It keeps its center, and changes at once, also in combat."))
+        WTF.T("How big the shard counter is, in percent."))
     DefaultTick(counterScaleInitializer, WTF.FRAME_SCALE_MIN, WTF.FRAME_SCALE_MAX, WTF.DEFAULT_FRAME_SCALE)
     counterScaleInitializer:SetParentInitializer(counterInitializer, function() return WTF.db.shards.counter end)
 end
 
+-- Greyed while Stones (the top page's switch) is off (1.13.0; John: "when the
+-- top-level is off, the settings that are controlling a disabled feature
+-- should be disabled too"). Stones gates the bar and the reminders; the stone
+-- macros work without it, so their row stays.
+local function StonesOn()
+    return WTF.db.stones.enabled == true
+end
+
+local function GreyUnless(initializer, predicate)
+    if type(initializer) == "table" and type(initializer.AddModifyPredicate) == "function" then
+        initializer:AddModifyPredicate(predicate)
+    end
+    return initializer
+end
+
 local function AddStonesPage(parent)
     local page = Settings.RegisterVerticalLayoutSubcategory(parent, STONES_TITLE)
-    local shownInitializer = Flag(page, "WTF_STONES_SHOWN", WTF.T("Show the Stones bar"), "stones", "shown", true,
-        WTF.T("The bar with the Soulstone and Healthstone buttons. Changes in combat apply when combat ends."),
-        RefreshStones)
+    local shownInitializer = GreyUnless(Flag(page, "WTF_STONES_SHOWN", WTF.T("Show the Stones bar"), "stones", "shown",
+        true, WTF.T("The bar with the Soulstone and Healthstone buttons."),
+        RefreshStones), StonesOn)
     local scale = Proxy(page, "WTF_STONES_SCALE", Settings.VarType.Number, WTF.T("Stones bar size"),
         WTF.DEFAULT_FRAME_SCALE,
         function() return WTF.db.stones.scale end,
         function(value) WTF.SetStonesScale(value) end)
     local scaleInitializer = Settings.CreateSlider(page, scale,
         SliderOptions(WTF.FRAME_SCALE_MIN, WTF.FRAME_SCALE_MAX, WTF.FRAME_SCALE_STEP, true),
-        WTF.T("How big the Stones bar is, in percent. It keeps its center. A change in combat applies when combat ends."))
+        WTF.T("How big the Stones bar is, in percent."))
     DefaultTick(scaleInitializer, WTF.FRAME_SCALE_MIN, WTF.FRAME_SCALE_MAX, WTF.DEFAULT_FRAME_SCALE)
     scaleInitializer:SetParentInitializer(shownInitializer, function() return WTF.db.stones.shown end)
+    GreyUnless(scaleInitializer, StonesOn)
+    -- Horizontal or vertical (1.14.0, Dyre's Toolkit 2.18.0): the toolkit's
+    -- row, only when the bar is its widget; greyed as the size.
+    local widget = WTF.StonesWidget and WTF.StonesWidget()
+    if widget then
+        local layoutInitializer = WTF.toolkit.AddBarLayoutSetting(page, nil, widget, {modify = StonesOn,
+            tooltip = WTF.T("Lay the Stones buttons out in a row or a column.")})
+        if type(layoutInitializer) == "table" and type(layoutInitializer.SetParentInitializer) == "function" then
+            layoutInitializer:SetParentInitializer(shownInitializer, function() return WTF.db.stones.shown end)
+        end
+    end
     Flag(page, "WTF_STONES_MACROS", WTF.T("Keep stone macros"), "stones", "macros", true,
-        WTF.T("Keep \"! Healthstone\" and \"! Soulstone\" in your character macros for your action bars: "
-            .. "left-click uses your best stone, right-click creates one. Turning this off deletes them."),
+        WTF.T("Keep the \"! Healthstone\" and \"! Soulstone\" macros for your action bars: left-click uses your "
+            .. "best stone, right-click creates one. Turning this off deletes them."),
         function() WTF.ApplyStoneMacros() end)
     ComingSoon(page, "WTF_STONES_SPELLSTONE", WTF.T("Spellstone button"),
         WTF.T("A Spellstone button and macro: left-click uses it, right-click creates one."))
     ComingSoon(page, "WTF_STONES_FIRESTONE", WTF.T("Firestone button"),
         WTF.T("A Firestone button and macro: left-click uses it, right-click creates one."))
-    Flag(page, "WTF_STONES_REMIND_SOULSTONE", WTF.T("Soulstone reminders"), "stones", "remindSoulstone", true,
-        WTF.T("Say in chat when your Soulstone ends, and when none is up: on entering an instance, joining a group, "
-            .. "or after a fight, at most every 10 minutes."))
-    Flag(page, "WTF_STONES_REMIND_HEALTHSTONE", WTF.T("Healthstone reminders"), "stones", "remindHealthstone", true,
-        WTF.T("Say in chat when you carry no Healthstone, at the same times."))
+    GreyUnless(Flag(page, "WTF_STONES_REMIND_SOULSTONE", WTF.T("Soulstone reminders"), "stones", "remindSoulstone", true,
+        WTF.T("Say in chat when your Soulstone ends or none is up.")), StonesOn)
+    GreyUnless(Flag(page, "WTF_STONES_REMIND_HEALTHSTONE", WTF.T("Healthstone reminders"), "stones", "remindHealthstone",
+        true, WTF.T("Say in chat when you carry no Healthstone.")), StonesOn)
     ComingSoon(page, "WTF_STONES_REMIND_SPELLSTONE", WTF.T("Spellstone reminders"),
-        WTF.T("Say in chat when you carry no Spellstone, at the same times."))
+        WTF.T("Say in chat when you carry no Spellstone."))
     ComingSoon(page, "WTF_STONES_REMIND_FIRESTONE", WTF.T("Firestone reminders"),
-        WTF.T("Say in chat when you carry no Firestone, at the same times."))
+        WTF.T("Say in chat when you carry no Firestone."))
 end
 
 -- Announce page --------------------------------------------------------------
@@ -431,6 +630,20 @@ local function Text(parent, font, text)
     return label
 end
 
+-- A control on the Announce page, greyed while Announce is off.
+local function SetUsable(control, usable)
+    if type(control.SetEnabled) == "function" then
+        control:SetEnabled(usable)
+    end
+    if control.label and type(control.label.SetTextColor) == "function" then
+        if usable then
+            control.label:SetTextColor(1, 1, 1)
+        else
+            control.label:SetTextColor(0.5, 0.5, 0.5)
+        end
+    end
+end
+
 local function CheckButton(parent, template, label)
     local button = CreateFrame("CheckButton", nil, parent, template)
     button.label = Text(button, "GameFontHighlight", label)
@@ -453,8 +666,8 @@ local function CreateAnnouncePage()
     title:SetPoint("TOPLEFT", PAGE_LEFT, -16)
     local help = Text(content, "GameFontHighlightSmall",
         WTF.T("%T is the target's full name and %Z your zone. Press Enter to keep an edit, Escape to undo it. "
-            .. "Nothing is sent for yourself or for a cast that fails. The Fear and Banish announcements moved "
-            .. "to Dyre's Debuff Tracker (the Control page)."))
+            .. "Nothing is sent for yourself or for a cast that fails. The Fear and Banish announcements are on "
+            .. "the Control page, in Dyre's Debuff Tracker."))
     help:SetPoint("TOPLEFT", title, "BOTTOMLEFT", 0, -8)
     help:SetWidth(EDIT_WIDTH)
 
@@ -532,13 +745,18 @@ local function CreateAnnouncePage()
     function page:OnRefresh()
         FitContent()
         local settings = WTF.db.announce
+        -- The Announce switch is on WTF's top page; this page reads it as it shows.
+        local usable = settings.enabled == true
         for _, radio in ipairs(self.channels) do
             radio:SetChecked(settings.channel == radio.value)
+            SetUsable(radio, usable)
         end
         for _, row in ipairs(self.rows) do
             row.check:SetChecked(settings[row.switch])
             row.edit:SetText(settings[row.key])
             row.edit:SetCursorPosition(0)
+            SetUsable(row.check, usable)
+            SetUsable(row.edit, usable)
         end
     end
 
@@ -563,7 +781,10 @@ function WTF.InitializeOptions()
     end
     -- With Dyre's Toolkit, WTF's page sits under its "Dyre's AddOns" home and
     -- WTF's own pages under that; else WTF's page is top level.
-    local home = WTF.toolkit and WTF.toolkit.RegisterSettingsCategory(TITLE)
+    local home, homeLayout
+    if WTF.toolkit then
+        home, homeLayout = WTF.toolkit.RegisterSettingsCategory(TITLE)
+    end
     category = home or Settings.RegisterVerticalLayoutCategory(TITLE)
     Flag(category, "WTF_SHARDS_ENABLED", WTF.T("Soul Shard management"), "shards", "enabled", true,
         WTF.T("Delete Soul Shards that Drain Soul creates above your limit. Shards you move into your bags are "
@@ -588,9 +809,7 @@ function WTF.InitializeOptions()
                 end
             end)
         Settings.CreateCheckbox(category, unlocked,
-            WTF.T("Outline the Stones bar and the shard counter, so you can drag "
-                .. "them; untick to lock them again. /wtf unlock and /wtf lock do the same, and /wtf reset moves "
-                .. "them back."))
+            WTF.T("Outline the Stones bar and the shard counter, so you can drag them."))
         local grid = Proxy(category, "WTF_GRID", Settings.VarType.Boolean, WTF.T("Show a grid while unlocked"), true,
             function() return WTF.db.grid end,
             function(value)
@@ -600,6 +819,15 @@ function WTF.InitializeOptions()
         Settings.CreateCheckbox(category, grid,
             WTF.T("While frames are unlocked, draw a faint grid over the screen with the center lines in red, so you "
                 .. "can line frames up."))
+    end
+    -- After WTF's own switches, each moved section's top switch, in the
+    -- sub-pages' order.
+    if home and homeLayout and HasParts() then
+        for _, list in ipairs({DDT_PAGES, MOVED_PAGES}) do
+            for _, moved in ipairs(list) do
+                AddMovedMaster(category, homeLayout, moved)
+            end
+        end
     end
     AddShardPage(category)
     AddStonesPage(category)

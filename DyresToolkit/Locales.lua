@@ -482,6 +482,54 @@ local zhCN = {
     ["Hamstring"] = "断筋",
     ["Turn Undead"] = "超度亡灵",
     ["Repentance"] = "忏悔",
+
+    -- 2.18.0: bindings, bar layout, the welcome flag, and shortened proc text
+    ["Dyre's Threat and Combat Tools"] = "Dyre 的威胁与战斗工具",
+    ["Skull mouseover, else target"] = "骷髅：鼠标指向，否则当前目标",
+    ["Skull and ping Attack, mouseover, else target"] = "骷髅并发出攻击信号：鼠标指向，否则当前目标",
+    ["Ping Attack on your target"] = "对目标发出攻击信号",
+    ["Ping Warning on your target"] = "对目标发出警告信号",
+    ["Ping Assist on your target"] = "对目标发出协助信号",
+    ["Ping On my way on your target"] = "对目标发出“正在赶来”信号",
+    ["Lay the buttons out in a row or a column."] = "将按钮排成一行或一列。",
+    ["Layout"] = "排列",
+    ["Horizontal"] = "横向",
+    ["Vertical"] = "纵向",
+    ["Threat, tank tools, and swing timer"] = "威胁、坦克工具与挥砍计时",
+    ["Open"] = "打开",
+    ["Dyre's Threat and Combat Tools: threat labels and sounds, tank tools, and the swing timer."] =
+        "Dyre 的威胁与战斗工具：威胁文字与音效、坦克工具和挥砍计时。",
+    ["These are now in Dyre's Threat and Combat Tools: install it from CurseForge."] =
+        "这些功能现已移至 Dyre 的威胁与战斗工具：请从 CurseForge 安装。",
+    ["The threat labels, tank tools, and swing timer are now in Dyre's Threat and Combat Tools: install it "
+        .. "from CurseForge, then use /dct."] =
+        "威胁文字、坦克工具和挥砍计时现已移至 Dyre 的威胁与战斗工具：请从 CurseForge 安装，然后使用 /dct。",
+    ["Use /dyre (settings), /dyre unlock, /dyre lock, /dyre grid, /dyre snap, /dyre minimap, or /dyre debug."] =
+        "使用 /dyre（设置）、/dyre unlock、/dyre lock、/dyre grid、/dyre snap、/dyre minimap 或 /dyre debug。",
+    ["Shows an arc and plays a chime when a proc makes an important spell or ability ready."] =
+        "触发使重要法术或技能就绪时，显示弧线并播放提示音。",
+    ["Shows every Dyre's AddOn frame so you can drag it."] = "显示所有 Dyre 插件的框体，以便拖动。",
+    ["Shows a grid across the screen while frames are unlocked."] = "框体解锁时在屏幕上显示网格。",
+    ["Frames you drop line up with the grid; hold Ctrl as you drop to place one exactly."] =
+        "放下的框体与网格对齐；按住 Ctrl 放下可精确摆放。",
+    ["Shows the Dyre's AddOns button on the minimap."] = "在小地图上显示 Dyre 插件按钮。",
+    ["Each Dyre's AddOn says its name and version in chat at login."] =
+        "登录时每个 Dyre 插件都会在聊天框显示名称与版本。",
+    ["The sound to play when %s can be used."] = "当%s可以使用时播放的音效。",
+    ["The sound to play when %s procs."] = "当%s触发时播放的音效。",
+    ["An arc on each side of you while %s can be used."] = "%s可以使用时，在你两侧显示弧线。",
+    ["An arc on each side of you while %s is up."] = "%s持续期间，在你两侧显示弧线。",
+    ["Plays a sound when %s can be used."] = "%s可以使用时播放提示音。",
+    ["Plays a sound when %s procs."] = "%s触发时播放提示音。",
+    [" Greyed out: you have not learned %s yet."] = " 已变灰：你尚未学会%s。",
+    ["How big the proc arcs are."] = "触发弧线的大小。",
+    ["Puts the proc arcs back to their normal size."] = "将触发弧线恢复为正常大小。",
+    ["How solid it is."] = "它的不透明度。",
+    ["Its %s."] = "它的%s。",
+    ["Puts it back to its normal size."] = "将其恢复为正常大小。",
+    ["Switch between a row and a column."] = "在一行与一列之间切换。",
+    ["Pick another character's settings, or Defaults, then press Copy."] =
+        "选择另一个角色的设置，或“默认”，然后按“复制”。",
 }
 
 ns.LOCALES = {enUS = enUS, zhCN = zhCN}

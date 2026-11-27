@@ -307,7 +307,8 @@ end
 -- The AddOn's proc settings, repaired (it calls this from its own
 -- SanitizeDB): per proc, the arc switch (on by default), the sound switch
 -- (ProcSoundDefault), and the sound; the arcs widget's place and size (the
--- widget clamps the size).
+-- widget clamps the size); `enabled` (2.17.0, the master switch: false
+-- only when turned off; John, 2026-11-27: "Add the Procs master switch").
 function DyresToolkit.SanitizeProcs(saved, procs)
     saved = type(saved) == "table" and saved or {}
     local function Part(name)
@@ -315,7 +316,7 @@ function DyresToolkit.SanitizeProcs(saved, procs)
     end
     local arc, sound, sounds = Part("arc"), Part("sound"), Part("sounds")
     local clean = {arc = {}, sound = {}, sounds = {}, position = SanitizePosition(saved.position),
-        scale = type(saved.scale) == "number" and saved.scale or nil}
+        scale = type(saved.scale) == "number" and saved.scale or nil, enabled = saved.enabled ~= false}
     for _, proc in ipairs(type(procs) == "table" and procs or {}) do
         if ValidProc(proc) then
             if type(arc[proc.key]) == "boolean" then
@@ -404,7 +405,25 @@ function DyresToolkit.SanitizeProcIDs(saved, procs)
 end
 
 -- Whether this character knows the proc's talent (any of its IDs); a usable
--- proc with no talents: whether it knows the spell itself.
+-- proc with no talents: whether it knows the spell itself. Then by name in
+-- the spellbook (2.16.0; a CurseForge player, 2026-11-27: Revenge's cue went
+-- away after training a higher rank, since the check asked only for rank 1's
+-- ID and Forever reported only the trained rank as known): any rank, in the
+-- client's own language, with no rank list to keep.
+local function KnowsByName(ids)
+    if type(DyresToolkit.SpellbookIDsByName) ~= "function" or type(DyresToolkit.SpellName) ~= "function" then
+        return false
+    end
+    local _, learned = DyresToolkit.SpellbookIDsByName()
+    for _, id in ipairs(ids) do
+        local name = DyresToolkit.SpellName(id)
+        if name and learned[name] == true then
+            return true
+        end
+    end
+    return false
+end
+
 local function KnowsTalent(proc)
     local ids = proc.talents or {}
     if IsUsableProc(proc) and #ids == 0 then
@@ -422,7 +441,7 @@ local function KnowsTalent(proc)
             return true
         end
     end
-    return false
+    return KnowsByName(ids)
 end
 
 local function HasAuraContainer()
@@ -548,9 +567,20 @@ function DyresToolkit.RegisterProcs(spec)
         return type(store) == "table" and store or {}
     end
 
+    -- Every arc and sound goes through here, so the master switch (store
+    -- `enabled` false) turns them all off; each proc's own switches keep
+    -- their values. Claims stay (off means off).
     local function Switch(part, key)
-        local values = Store()[part]
+        local store = Store()
+        if store.enabled == false then
+            return false
+        end
+        local values = store[part]
         return type(values) == "table" and values[key] == true
+    end
+
+    function handle.Enabled()
+        return Store().enabled ~= false
     end
 
     -- Whether this AddOn owns the proc's kind (no Owners, or no owner at all:
@@ -1121,6 +1151,36 @@ local function ShownIf(initializer, predicate)
     return initializer
 end
 
+-- The master switch's variable: DYRE_<ADDON>_PROCS_ENABLED, mapped by a
+-- settings section's ctx.variable on a host page.
+local function MasterVariable(addon, map)
+    local name = ("DYRE_" .. addon .. "_PROCS_ENABLED"):upper():gsub("[^%w_]", "_")
+    return type(map) == "function" and map(name) or name
+end
+
+-- The master switch (2.17.0; John, 2026-11-27: "Add the Procs master
+-- switch"): one checkbox that turns every proc's arcs and sounds off and
+-- on; each proc's own switches keep their values. opts: label (default
+-- "Enable"), tooltip, variable (a settings section's ctx.variable). Gives
+-- the initializer, or nil. AddProcSettings' rows are greyed while it is off
+-- and check again at once when it changes (they watch its variable).
+function DyresToolkit.AddProcMasterSetting(category, layout, handle, opts)
+    if not HasSettingsAPI() or type(category) ~= "table" or type(handle) ~= "table"
+            or type(handle.Store) ~= "function" or type(handle.Addon) ~= "function" then
+        return nil
+    end
+    opts = type(opts) == "table" and opts or {}
+    local setting = Settings.RegisterProxySetting(category, MasterVariable(handle.Addon(), opts.variable),
+        Settings.VarType.Boolean, opts.label or "Enable", true,
+        function() return handle.Store().enabled ~= false end,
+        function(value)
+            handle.Store().enabled = value == true
+            handle.Apply()
+        end)
+    return Settings.CreateCheckbox(category, setting, opts.tooltip
+        or ns.T("Shows an arc and plays a chime when a proc makes an important spell or ability ready."))
+end
+
 function DyresToolkit.AddProcSettings(category, layout, handle, opts)
     if not HasSettingsAPI() or type(category) ~= "table" or type(handle) ~= "table"
             or type(handle.List) ~= "function" then
@@ -1128,6 +1188,20 @@ function DyresToolkit.AddProcSettings(category, layout, handle, opts)
     end
     opts = type(opts) == "table" and opts or {}
     local list = handle.List()
+    -- 2.17.0: opts.keys, a list of proc keys, keeps only those (a settings
+    -- section on a host page: Warlock Tools Forever's {"nightfall"}).
+    if type(opts.keys) == "table" then
+        local wanted, kept = {}, {}
+        for _, key in ipairs(opts.keys) do
+            wanted[key] = true
+        end
+        for _, proc in ipairs(list) do
+            if wanted[proc.key] then
+                kept[#kept + 1] = proc
+            end
+        end
+        list = kept
+    end
     if #list == 0 then
         return nil
     end
@@ -1140,19 +1214,31 @@ function DyresToolkit.AddProcSettings(category, layout, handle, opts)
         end
         return false
     end
+    -- 2.17.0: opts.variable maps each variable (a settings section's
+    -- ctx.variable on a host page; Blizzard refuses a variable twice).
     local function Variable(proc, part)
-        return ("DYRE_" .. addon .. "_PROC_" .. proc.key .. "_" .. part):upper():gsub("[^%w_]", "_")
+        local name = ("DYRE_" .. addon .. "_PROC_" .. proc.key .. "_" .. part):upper():gsub("[^%w_]", "_")
+        return type(opts.variable) == "function" and opts.variable(name) or name
     end
     local function Store()
         return handle.Store()
     end
     local rows = {}
-    if type(layout) == "table" and type(layout.AddInitializer) == "function"
+    -- 2.17.0: opts.header false draws no header (the AddOn draws its own);
+    -- opts.master = {label, tooltip} puts the master switch
+    -- (AddProcMasterSetting, with opts.variable) right under the header.
+    if opts.header ~= false and type(layout) == "table" and type(layout.AddInitializer) == "function"
             and type(CreateSettingsListSectionHeaderInitializer) == "function" then
+        -- 2.17.0 (John, 2026-11-27: "I expect to see every setting available
+        -- for warlocks, but only enabled if I have it. Not a generic
+        -- banner"): every proc of the class is listed, greyed until known.
         local header = CreateSettingsListSectionHeaderInitializer(ns.T(opts.header or "Procs"))
-        ShownIf(header, AnyKnown)
         layout:AddInitializer(header)
         rows.header = header
+    end
+    if type(opts.master) == "table" then
+        rows.master = DyresToolkit.AddProcMasterSetting(category, layout, handle,
+            {label = opts.master.label, tooltip = opts.master.tooltip, variable = opts.variable})
     end
     -- 2.12.0: a proc another AddOn owns keeps its rows, greyed, naming it.
     local function OwnedHere(proc)
@@ -1176,9 +1262,19 @@ function DyresToolkit.AddProcSettings(category, layout, handle, opts)
         end
         return ns.T(" Shown by %s now, so this setting does nothing here."):format(tostring(title))
     end
+    local watch = {MasterVariable(addon, opts.variable)}
+    for _, name in ipairs(type(opts.watch) == "table" and opts.watch or {opts.watch}) do
+        watch[#watch + 1] = name
+    end
     local function Greyed(initializer, proc)
+        DyresToolkit.WatchSettings(initializer, watch)
         if type(initializer) == "table" and type(initializer.AddModifyPredicate) == "function" then
-            initializer:AddModifyPredicate(function() return OwnedHere(proc) end)
+            -- 2.17.0: opts.modify, e.g. the owner's Proc switch, greys every
+            -- row while it gives false; so does the engine's master switch.
+            initializer:AddModifyPredicate(function()
+                return handle.Known(proc.key) and OwnedHere(proc) and handle.Enabled()
+                    and (type(opts.modify) ~= "function" or opts.modify() ~= false)
+            end)
         end
         return initializer
     end
@@ -1188,10 +1284,15 @@ function DyresToolkit.AddProcSettings(category, layout, handle, opts)
         end
         return DyresToolkit.ProcArcDefault(proc)
     end
+    -- Greyed until known: the tooltip says why (the one second sentence a
+    -- player needs).
+    local function NotLearned(proc)
+        return handle.Known(proc.key) and ""
+            or ns.T(" Greyed out: you have not learned %s yet."):format(ns.T(proc.label))
+    end
     local function Flag(proc, part, name, tooltip)
-        local text = tooltip
-        if type(handle.Owns) == "function" then
-            text = function() return tooltip .. OwnerNote(proc) end
+        local text = function()
+            return tooltip .. NotLearned(proc) .. (type(handle.Owns) == "function" and OwnerNote(proc) or "")
         end
         local setting = Settings.RegisterProxySetting(category, Variable(proc, part), Settings.VarType.Boolean,
             name, Defaults(proc, part),
@@ -1205,8 +1306,7 @@ function DyresToolkit.AddProcSettings(category, layout, handle, opts)
                 store[part][proc.key] = value == true
                 handle.Apply()
             end)
-        local row = ShownIf(Settings.CreateCheckbox(category, setting, text), function() return handle.Known(proc.key) end)
-        return Greyed(row, proc)
+        return Greyed(Settings.CreateCheckbox(category, setting, text), proc)
     end
     for _, proc in ipairs(list) do
         local extra = type(proc.tooltip) == "string" and proc.tooltip ~= "" and (" " .. ns.T(proc.tooltip)) or ""
@@ -1223,25 +1323,17 @@ function DyresToolkit.AddProcSettings(category, layout, handle, opts)
         if silent then
             -- A usable proc without usableSounds: the arc switch only.
             rows[proc.key] = {arc = Flag(proc, "arc", ns.T("%s arc"):format(ns.T(proc.label)),
-                ns.T("An arc each side of you, in its own color, while %s can be used. It is "
-                    .. "dimmed while you are short of rage or other power, also in combat.")
-                    :format(ns.T(proc.label)) .. extra)}
+                ns.T("An arc on each side of you while %s can be used."):format(ns.T(proc.label)) .. extra)}
         elseif usable then
             arc = Flag(proc, "arc", ns.T("%s arc"):format(ns.T(proc.label)),
-                ns.T("An arc each side of you, in its own color, while %s can be used. It is "
-                    .. "dimmed while you are short of rage or other power, also in combat.")
-                    :format(ns.T(proc.label)) .. extra)
+                ns.T("An arc on each side of you while %s can be used."):format(ns.T(proc.label)) .. extra)
             sound = Flag(proc, "sound", ns.T("%s sound"):format(ns.T(proc.label)),
-                ns.T("Play a sound the moment %s can be used, also in combat; at most once every "
-                    .. "%d seconds."):format(ns.T(proc.label), USABLE_SOUND_GAP) .. extra)
+                ns.T("Plays a sound when %s can be used."):format(ns.T(proc.label)) .. extra)
         else
             arc = Flag(proc, "arc", ns.T("%s arc"):format(ns.T(proc.label)),
-                ns.T("An arc each side of you, in its own color, while %s is up. It drains with the "
-                    .. "time left and goes the moment you use it, also in combat.")
-                    :format(ns.T(proc.label)) .. extra)
+                ns.T("An arc on each side of you while %s is up."):format(ns.T(proc.label)) .. extra)
             sound = Flag(proc, "sound", ns.T("%s sound"):format(ns.T(proc.label)),
-                ns.T("Play a sound the moment %s procs, also in combat.")
-                    :format(ns.T(proc.label)) .. extra)
+                ns.T("Plays a sound when %s procs."):format(ns.T(proc.label)) .. extra)
         end
         if not silent then
         local choice = Settings.RegisterProxySetting(category, Variable(proc, "sound_choice"),
@@ -1262,13 +1354,9 @@ function DyresToolkit.AddProcSettings(category, layout, handle, opts)
                 handle.Preview(proc.key)
             end)
         local soundTooltip = usable
-            and ns.T("The sound when %s can be used. Choosing one plays it once. The sounds come from "
-                .. "Dyre's Sounds."):format(ns.T(proc.label))
-            or ns.T("The sound when %s procs. Choosing one plays it once. The sounds come from "
-                .. "Dyre's Sounds."):format(ns.T(proc.label))
-        local dropdown = Greyed(ShownIf(Settings.CreateDropdown(category, choice, Choices,
-            soundTooltip .. extra),
-            function() return handle.Known(proc.key) end), proc)
+            and ns.T("The sound to play when %s can be used."):format(ns.T(proc.label))
+            or ns.T("The sound to play when %s procs."):format(ns.T(proc.label))
+        local dropdown = Greyed(Settings.CreateDropdown(category, choice, Choices, soundTooltip .. extra), proc)
         local library = SoundLibrary()
         if library then
             library.SetupMenu(dropdown, filter)
@@ -1283,12 +1371,16 @@ function DyresToolkit.AddProcSettings(category, layout, handle, opts)
         end
     end
     local widget = handle.Widget()
-    if widget and AnyKnown() then
+    if widget then
         DyresToolkit.AddWidgetSettings(category, layout, widget, {
             labels = {scale = ns.T("Proc arc size")},
-            tooltips = {scale = ns.T("How big the proc arcs are, in percent. They grow and shrink from their "
-                .. "center, and the gap between them grows with them.")},
-            resetTooltip = ns.T("The proc arcs back to 100%."),
+            tooltips = {scale = ns.T("How big the proc arcs are.")},
+            resetTooltip = ns.T("Puts the proc arcs back to their normal size."),
+            variable = opts.variable,
+            modify = function()
+                return AnyKnown() and handle.Enabled() and (type(opts.modify) ~= "function" or opts.modify() ~= false)
+            end,
+            watch = watch,
         })
     end
     return rows

@@ -209,11 +209,9 @@ function WTF.ReportMovedFeatures()
     for _, other in ipairs(WTF.MOVED_TO) do
         local state = AddOnState(other.addon)
         if state == "disabled" then
-            WTF.Report(string.format(WTF.T("Enable %s in the AddOn list for %s: it moved there from WTF."),
-                other.title, other.what))
+            WTF.Report(string.format(WTF.T("Enable %s in the AddOn list for %s."), other.title, other.what))
         elseif state == "missing" then
-            WTF.Report(string.format(WTF.T("Install %s from CurseForge for %s: it moved there from WTF."),
-                other.title, other.what))
+            WTF.Report(string.format(WTF.T("Install %s from CurseForge for %s."), other.title, other.what))
         end
     end
 end
@@ -464,6 +462,9 @@ function WTF.SanitizeDB(db)
         shown = stones.shown ~= false,
         position = SanitizePosition(stones.position),
         scale = WTF.SanitizeFrameScale(stones.scale),
+        -- The bar's layout (1.14.0, Dyre's Toolkit 2.18.0's form): "vertical",
+        -- else nil (a row).
+        orientation = stones.orientation == "vertical" and "vertical" or nil,
         macros = stones.macros ~= false,
         remindSoulstone = stones.remindSoulstone ~= false,
         remindHealthstone = stones.remindHealthstone ~= false,
